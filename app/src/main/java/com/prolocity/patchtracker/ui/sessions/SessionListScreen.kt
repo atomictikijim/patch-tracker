@@ -123,6 +123,16 @@ fun SessionListScreen(
                                     .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(4.dp))
                                     .padding(horizontal = 10.dp, vertical = 4.dp)
                             )
+                        } else if (session.isFinalized) {
+                            Text(
+                                text = "Finalized",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier
+                                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(4.dp))
+                                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                            )
                         }
                     }
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)

@@ -135,6 +135,10 @@ class PatchTrackerViewModel(private val repository: PatchRepository) : ViewModel
         repository.setCurrentSession(id)
     }
 
+    fun markSessionFinalized(id: Long) = viewModelScope.launch {
+        repository.markSessionFinalized(id)
+    }
+
     fun deleteSession(session: Session) = viewModelScope.launch {
         repository.deleteSession(session)
     }

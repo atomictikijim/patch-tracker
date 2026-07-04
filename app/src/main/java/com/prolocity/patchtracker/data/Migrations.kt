@@ -66,3 +66,11 @@ val MIGRATION_9_10 = object : Migration(9, 10) {
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_patch_award_events_sessionId` ON `patch_award_events` (`sessionId`)")
     }
 }
+
+// Adds the finalized flag (set once a session has been exported) - a plain column add, no
+// foreign-key rebuild needed this time.
+val MIGRATION_10_11 = object : Migration(10, 11) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE sessions ADD COLUMN isFinalized INTEGER NOT NULL DEFAULT 0")
+    }
+}

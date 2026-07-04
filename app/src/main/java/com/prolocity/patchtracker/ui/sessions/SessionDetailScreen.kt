@@ -58,6 +58,7 @@ fun SessionDetailScreen(
     var showClearDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showCantDeleteCurrentDialog by remember { mutableStateOf(false) }
+    var showMustFinalizeDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(sessionId) {
         session = viewModel.getSession(sessionId)
@@ -74,6 +75,8 @@ fun SessionDetailScreen(
             val lines = viewModel.getSessionAwardLines(sessionId)
             val data = buildSessionBackupData(current, lines)
             context.contentResolver.openOutputStream(uri)?.use { writeSessionBackup(it, data) }
+            viewModel.markSessionFinalized(sessionId)
+            session = current.copy(isFinalized = true)
         }
     }
 
@@ -87,11 +90,17 @@ fun SessionDetailScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { showRenameDialog = true }) {
-                        Icon(Icons.Filled.Edit, contentDescription = "Rename")
+                    if (session?.isFinalized != true) {
+                        IconButton(onClick = { showRenameDialog = true }) {
+                            Icon(Icons.Filled.Edit, contentDescription = "Rename")
+                        }
                     }
                     IconButton(onClick = {
-                        if (session?.isCurrent == true) showCantDeleteCurrentDialog = true else showDeleteDialog = true
+                        when {
+                            session?.isCurrent == true -> showCantDeleteCurrentDialog = true
+                            session?.isFinalized != true -> showMustFinalizeDialog = true
+                            else -> showDeleteDialog = true
+                        }
                     }) {
                         Icon(Icons.Filled.Delete, contentDescription = "Delete")
                     }
@@ -110,8 +119,15 @@ fun SessionDetailScreen(
                 text = if (awardCount == 1) "1 patch award entry" else "$awardCount patch award entries",
                 style = MaterialTheme.typography.bodyMedium
             )
+            if (current.isFinalized) {
+                Text(
+                    text = "Finalized — exported and locked from further changes",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
 
-            if (!current.isCurrent) {
+            if (!current.isCurrent && !current.isFinalized) {
                 SaveButton(
                     label = "Set as Current",
                     enabled = true,
@@ -172,6 +188,16 @@ fun SessionDetailScreen(
                 onBack()
             },
             onDismiss = { showDeleteDialog = false }
+        )
+    }
+
+    if (showMustFinalizeDialog) {
+        ConfirmDialog(
+            title = "Export this session first",
+            text = "A session must be exported (finalizing it) before it can be deleted.",
+            confirmLabel = "OK",
+            onConfirm = { showMustFinalizeDialog = false },
+            onDismiss = { showMustFinalizeDialog = false }
         )
     }
 

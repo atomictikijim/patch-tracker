@@ -87,6 +87,8 @@ class PatchRepository(
 
     suspend fun setCurrentSession(id: Long) = sessionDao.setCurrent(id)
 
+    suspend fun markSessionFinalized(id: Long) = sessionDao.markFinalized(id)
+
     suspend fun deleteSession(session: Session) = sessionDao.delete(session)
 
     suspend fun clearSessionAwards(sessionId: Long) = patchAwardDao.deleteEventsForSession(sessionId)

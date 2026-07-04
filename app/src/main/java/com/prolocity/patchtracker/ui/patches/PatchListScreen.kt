@@ -67,6 +67,7 @@ private data class PatchEventGroup(
     val playerNumber: String,
     val sessionId: Long,
     val sessionName: String,
+    val sessionFinalized: Boolean,
     val division: String,
     val dateEarned: LocalDate,
     val photoPath: String?,
@@ -102,6 +103,7 @@ fun PatchListScreen(
                 playerNumber = first.playerNumber,
                 sessionId = first.sessionId,
                 sessionName = first.sessionName,
+                sessionFinalized = first.sessionFinalized,
                 division = first.division,
                 dateEarned = first.dateEarned,
                 photoPath = first.photoPath,
@@ -243,7 +245,7 @@ private fun PatchEventRow(
                     )
                     Text(line.patchName, modifier = Modifier.weight(1f))
                     StatusBadge(awarded = !line.isOutstanding)
-                    if (line.isOutstanding) {
+                    if (line.isOutstanding && !group.sessionFinalized) {
                         TextButton(onClick = { onMarkFulfilled(line.lineId) }) { Text("Mark Fulfilled") }
                     }
                 }
@@ -262,12 +264,14 @@ private fun PatchEventRow(
             )
         }
 
-        IconButton(onClick = onDeleteClick) {
-            Icon(
-                Icons.Filled.Delete,
-                contentDescription = "Delete",
-                tint = MaterialTheme.colorScheme.error
-            )
+        if (!group.sessionFinalized) {
+            IconButton(onClick = onDeleteClick) {
+                Icon(
+                    Icons.Filled.Delete,
+                    contentDescription = "Delete",
+                    tint = MaterialTheme.colorScheme.error
+                )
+            }
         }
     }
 }

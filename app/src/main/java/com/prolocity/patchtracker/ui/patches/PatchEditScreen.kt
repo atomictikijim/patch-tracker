@@ -150,7 +150,7 @@ fun PatchEditScreen(
         val event = existing
         if (event != null && selectedSession == null) {
             selectedSession = sessions.find { it.id == event.sessionId }
-        } else if (isNew && selectedSession == null) {
+        } else if (isNew && selectedSession == null && currentSession?.isFinalized != true) {
             selectedSession = currentSession
         }
     }
@@ -186,8 +186,16 @@ fun PatchEditScreen(
         }
     }
 
-    val canSave = selectedPlayer != null && selectedSession != null && division.isNotBlank() &&
+    // An event whose session has already been exported is locked: it can no longer be
+    // added/edited, though it stays visible for reference.
+    val isLocked = !isNew && existing?.sessionId?.let { sid -> sessions.find { it.id == sid }?.isFinalized } == true
+
+    val canSave = !isLocked && selectedPlayer != null && selectedSession != null && division.isNotBlank() &&
         lines.isNotEmpty() && lines.all { it.patchType != null }
+
+    // A finalized session can't be picked for a new entry, but an existing (locked) entry
+    // still shows its own finalized session as the selected value.
+    val selectableSessions = sessions.filter { !it.isFinalized || it.id == selectedSession?.id }
 
     Scaffold(
         topBar = {
@@ -199,7 +207,7 @@ fun PatchEditScreen(
                     }
                 },
                 actions = {
-                    if (!isNew) {
+                    if (!isNew && !isLocked) {
                         IconButton(onClick = { showDeleteDialog = true }) {
                             Icon(Icons.Filled.Delete, contentDescription = "Delete")
                         }
@@ -218,6 +226,14 @@ fun PatchEditScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            if (isLocked) {
+                Text(
+                    text = "This session has been finalized and can no longer be edited.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+
             PlayerDropdown(
                 players = players,
                 selected = selectedPlayer,
@@ -225,7 +241,7 @@ fun PatchEditScreen(
             )
 
             SessionDropdown(
-                sessions = sessions,
+                sessions = selectableSessions,
                 selected = selectedSession,
                 onSelected = { selectedSession = it }
             )
@@ -290,6 +306,7 @@ fun PatchEditScreen(
                             fulfilledDate = LocalDate.now()
                         )
                     },
+                    enabled = !isLocked,
                     modifier = Modifier.fillMaxWidth().padding(top = 12.dp)
                 ) { Text("+ Add Another Patch") }
             }

@@ -28,6 +28,9 @@ interface SessionDao {
     @Delete
     suspend fun delete(session: Session)
 
+    @Query("UPDATE sessions SET isFinalized = 1 WHERE id = :id")
+    suspend fun markFinalized(id: Long)
+
     @Query("UPDATE sessions SET isCurrent = 0")
     suspend fun clearCurrentFlag()
 

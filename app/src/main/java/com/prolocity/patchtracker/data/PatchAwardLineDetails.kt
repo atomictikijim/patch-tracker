@@ -10,6 +10,7 @@ data class PatchAwardLineDetails(
     val playerNumber: String,
     val sessionId: Long,
     val sessionName: String,
+    val sessionFinalized: Boolean,
     val division: String,
     val dateEarned: LocalDate,
     val photoPath: String?,
