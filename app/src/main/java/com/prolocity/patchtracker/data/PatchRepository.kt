@@ -46,17 +46,19 @@ class PatchRepository(
         patchAwardDao.update(award.copy(fulfilledDate = date))
     }
 
-    suspend fun getTeam(id: Long): TeamWithMembers? = teamDao.getByIdWithMembers(id)
+    suspend fun getTeam(id: Long): Team? = teamDao.getById(id)
 
-    suspend fun addTeam(name: String, division: String, playerIds: List<Long>): Long {
+    suspend fun getTeamMemberIds(id: Long): List<Long> = teamDao.getMemberIdsOrdered(id)
+
+    suspend fun addTeam(name: String, division: String, slotPlayerIds: List<Long?>): Long {
         val id = teamDao.insert(Team(name = name, division = division))
-        teamDao.setMembers(id, playerIds.take(MAX_TEAM_PLAYERS))
+        teamDao.setMembers(id, slotPlayerIds.take(MAX_TEAM_PLAYERS))
         return id
     }
 
-    suspend fun updateTeam(team: Team, playerIds: List<Long>) {
+    suspend fun updateTeam(team: Team, slotPlayerIds: List<Long?>) {
         teamDao.update(team)
-        teamDao.setMembers(team.id, playerIds.take(MAX_TEAM_PLAYERS))
+        teamDao.setMembers(team.id, slotPlayerIds.take(MAX_TEAM_PLAYERS))
     }
 
     suspend fun deleteTeam(team: Team) = teamDao.delete(team)

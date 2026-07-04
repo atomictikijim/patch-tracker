@@ -15,5 +15,7 @@ import androidx.room.Index
 )
 data class TeamMember(
     val teamId: Long,
-    val playerId: Long
+    val playerId: Long,
+    // Slot index (0-7) the player was assigned to. Position 0 is the team captain.
+    val position: Int
 )

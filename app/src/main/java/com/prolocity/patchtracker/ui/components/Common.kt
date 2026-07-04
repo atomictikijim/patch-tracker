@@ -181,14 +181,14 @@ fun ConfirmDialog(
 }
 
 @Composable
-fun SaveButton(enabled: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun SaveButton(enabled: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, label: String = "Save") {
     Button(
         onClick = onClick,
         enabled = enabled,
         shape = ButtonShape,
         modifier = modifier.fillMaxWidth()
     ) {
-        Text("Save", fontWeight = FontWeight.Bold)
+        Text(label, fontWeight = FontWeight.Bold)
     }
 }
 

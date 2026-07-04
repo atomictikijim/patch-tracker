@@ -78,14 +78,16 @@ class PatchTrackerViewModel(private val repository: PatchRepository) : ViewModel
         repository.markFulfilled(id, date)
     }
 
-    suspend fun getTeam(id: Long): TeamWithMembers? = repository.getTeam(id)
+    suspend fun getTeam(id: Long): Team? = repository.getTeam(id)
 
-    fun addTeam(name: String, division: String, playerIds: List<Long>) = viewModelScope.launch {
-        repository.addTeam(name, division, playerIds)
+    suspend fun getTeamMemberIds(id: Long): List<Long> = repository.getTeamMemberIds(id)
+
+    fun addTeam(name: String, division: String, slotPlayerIds: List<Long?>) = viewModelScope.launch {
+        repository.addTeam(name, division, slotPlayerIds)
     }
 
-    fun updateTeam(team: Team, playerIds: List<Long>) = viewModelScope.launch {
-        repository.updateTeam(team, playerIds)
+    fun updateTeam(team: Team, slotPlayerIds: List<Long?>) = viewModelScope.launch {
+        repository.updateTeam(team, slotPlayerIds)
     }
 
     fun deleteTeam(team: Team) = viewModelScope.launch {

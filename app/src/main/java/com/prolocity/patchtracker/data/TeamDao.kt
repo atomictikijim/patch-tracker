@@ -14,9 +14,11 @@ interface TeamDao {
     @Query("SELECT * FROM teams ORDER BY name ASC")
     fun getAllWithMembers(): Flow<List<TeamWithMembers>>
 
-    @Transaction
     @Query("SELECT * FROM teams WHERE id = :id")
-    suspend fun getByIdWithMembers(id: Long): TeamWithMembers?
+    suspend fun getById(id: Long): Team?
+
+    @Query("SELECT playerId FROM team_members WHERE teamId = :teamId ORDER BY position ASC")
+    suspend fun getMemberIdsOrdered(teamId: Long): List<Long>
 
     @Insert
     suspend fun insert(team: Team): Long
@@ -33,9 +35,12 @@ interface TeamDao {
     @Query("DELETE FROM team_members WHERE teamId = :teamId")
     suspend fun clearMembers(teamId: Long)
 
+    // slotPlayerIds is indexed by slot (0-7, nullable for an empty slot); slot 0 is the captain.
     @Transaction
-    suspend fun setMembers(teamId: Long, playerIds: List<Long>) {
+    suspend fun setMembers(teamId: Long, slotPlayerIds: List<Long?>) {
         clearMembers(teamId)
-        playerIds.forEach { insertMember(TeamMember(teamId = teamId, playerId = it)) }
+        slotPlayerIds.forEachIndexed { position, playerId ->
+            if (playerId != null) insertMember(TeamMember(teamId = teamId, playerId = playerId, position = position))
+        }
     }
 }
