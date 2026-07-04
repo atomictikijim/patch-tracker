@@ -6,11 +6,13 @@ import java.time.LocalDate
 class PatchRepository(
     private val playerDao: PlayerDao,
     private val patchTypeDao: PatchTypeDao,
-    private val patchAwardDao: PatchAwardDao
+    private val patchAwardDao: PatchAwardDao,
+    private val teamDao: TeamDao
 ) {
     val players: Flow<List<Player>> = playerDao.getAll()
     val patchTypes: Flow<List<PatchType>> = patchTypeDao.getAll()
     val patchAwards: Flow<List<PatchAwardDetails>> = patchAwardDao.getAllDetails()
+    val teams: Flow<List<TeamWithMembers>> = teamDao.getAllWithMembers()
 
     suspend fun getPlayer(id: Long): Player? = playerDao.getById(id)
 
@@ -43,4 +45,19 @@ class PatchRepository(
         val award = patchAwardDao.getById(id) ?: return
         patchAwardDao.update(award.copy(fulfilledDate = date))
     }
+
+    suspend fun getTeam(id: Long): TeamWithMembers? = teamDao.getByIdWithMembers(id)
+
+    suspend fun addTeam(name: String, division: String, playerIds: List<Long>): Long {
+        val id = teamDao.insert(Team(name = name, division = division))
+        teamDao.setMembers(id, playerIds.take(MAX_TEAM_PLAYERS))
+        return id
+    }
+
+    suspend fun updateTeam(team: Team, playerIds: List<Long>) {
+        teamDao.update(team)
+        teamDao.setMembers(team.id, playerIds.take(MAX_TEAM_PLAYERS))
+    }
+
+    suspend fun deleteTeam(team: Team) = teamDao.delete(team)
 }

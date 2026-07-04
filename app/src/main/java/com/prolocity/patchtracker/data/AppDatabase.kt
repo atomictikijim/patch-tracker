@@ -11,8 +11,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Database(
-    entities = [Player::class, PatchType::class, PatchAward::class],
-    version = 5,
+    entities = [Player::class, PatchType::class, PatchAward::class, Team::class, TeamMember::class],
+    version = 6,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -20,6 +20,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun playerDao(): PlayerDao
     abstract fun patchTypeDao(): PatchTypeDao
     abstract fun patchAwardDao(): PatchAwardDao
+    abstract fun teamDao(): TeamDao
 
     companion object {
         @Volatile

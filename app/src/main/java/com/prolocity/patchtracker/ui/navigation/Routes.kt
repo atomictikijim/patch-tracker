@@ -11,5 +11,9 @@ object Routes {
 
     const val PATCH_TYPES = "patchTypes"
 
+    const val TEAMS = "teams"
+    const val TEAM_EDIT_PATTERN = "teams/edit/{id}"
+    fun teamEdit(id: Long) = "teams/edit/$id"
+
     const val NEW_ID = 0L
 }

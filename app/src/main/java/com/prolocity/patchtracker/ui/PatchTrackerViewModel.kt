@@ -7,6 +7,8 @@ import com.prolocity.patchtracker.data.PatchAward
 import com.prolocity.patchtracker.data.PatchRepository
 import com.prolocity.patchtracker.data.PatchType
 import com.prolocity.patchtracker.data.Player
+import com.prolocity.patchtracker.data.Team
+import com.prolocity.patchtracker.data.TeamWithMembers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -24,6 +26,10 @@ class PatchTrackerViewModel(private val repository: PatchRepository) : ViewModel
     )
 
     val patchAwards = repository.patchAwards.stateIn(
+        viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList()
+    )
+
+    val teams: StateFlow<List<TeamWithMembers>> = repository.teams.stateIn(
         viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList()
     )
 
@@ -70,6 +76,20 @@ class PatchTrackerViewModel(private val repository: PatchRepository) : ViewModel
 
     fun markFulfilled(id: Long, date: LocalDate = LocalDate.now()) = viewModelScope.launch {
         repository.markFulfilled(id, date)
+    }
+
+    suspend fun getTeam(id: Long): TeamWithMembers? = repository.getTeam(id)
+
+    fun addTeam(name: String, division: String, playerIds: List<Long>) = viewModelScope.launch {
+        repository.addTeam(name, division, playerIds)
+    }
+
+    fun updateTeam(team: Team, playerIds: List<Long>) = viewModelScope.launch {
+        repository.updateTeam(team, playerIds)
+    }
+
+    fun deleteTeam(team: Team) = viewModelScope.launch {
+        repository.deleteTeam(team)
     }
 }
 

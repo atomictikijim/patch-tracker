@@ -46,10 +46,10 @@ sqlite3 /tmp/db/patch_tracker.db "SELECT * FROM patch_types;"
 
 **Layers**, in dependency order:
 
-- `data/` — Room entities (`Player`, `PatchType`, `PatchAward`), DAOs, `AppDatabase`, and `PatchRepository`, which is the single point every ViewModel talks to. `PatchAwardDetails` is a hand-written join projection (not an entity) returned by `PatchAwardDao.getAllDetails()` — it flattens a patch award with its player and patch-type fields for list display in one query.
+- `data/` — Room entities (`Player`, `PatchType`, `PatchAward`, `Team`, `TeamMember`), DAOs, `AppDatabase`, and `PatchRepository`, which is the single point every ViewModel talks to. `PatchAwardDetails` is a hand-written join projection (not an entity) returned by `PatchAwardDao.getAllDetails()` — it flattens a patch award with its player and patch-type fields for list display in one query. `TeamWithMembers` is a Room `@Relation`/`@Junction` projection instead (a team's member list is a genuine one-to-many via the `team_members` join table, which flattens naturally to a `List<Player>` rather than one row).
 - `ui/PatchTrackerViewModel.kt` — one shared ViewModel for the whole app (not one per screen), exposed via `PatchTrackerViewModelFactory`. It wraps repository `Flow`s as `StateFlow`s and exposes suspend/launch wrapper functions for writes.
-- `ui/navigation/` — `Routes` (string constants + argument builders) and `PatchTrackerNavHost`, which owns the bottom `NavigationBar` (Patches / Players / Patch Types) and the `NavHost` graph, including the two edit-screen routes parameterized by a `Long` id (`Routes.NEW_ID = 0L` means "create new").
-- `ui/patches/`, `ui/players/`, `ui/patchtypes/` — one list screen + one add/edit screen per entity, following the same pattern: list screen takes `onAddClick`/`onEditClick` callbacks, edit screen takes an id (0 = new) and `onDone`/`onBack`.
+- `ui/navigation/` — `Routes` (string constants + argument builders) and `PatchTrackerNavHost`, which owns the bottom `NavigationBar` (Patches / Players / Teams / Patch Types) and the `NavHost` graph, including the edit-screen routes parameterized by a `Long` id (`Routes.NEW_ID = 0L` means "create new").
+- `ui/patches/`, `ui/players/`, `ui/patchtypes/`, `ui/teams/` — one list screen + one add/edit screen per entity, following the same pattern: list screen takes `onAddClick`/`onEditClick` callbacks, edit screen takes an id (0 = new) and `onDone`/`onBack`.
 - `ui/components/` — shared building blocks used across screens: `BrandTopAppBar`, `DateBadge`, `InitialsAvatar`, `SectionLabel`, `StatusBadge`, `ConfirmDialog`, `DatePickerField`, `SaveButton`, plus the patch-icon system (`PatchIcons.kt`) and camera-capture plumbing (`PatchPhotos.kt`, `PatchTypeFormDialog.kt`).
 - `ui/theme/` — the app's own "league-blue" Material3 color scheme (not the Compose default purple). `PatchTrackerTheme` sets `dynamicColor = false` by default deliberately, so the brand palette doesn't get overridden by Android 12+ wallpaper theming.
 - `PatchTrackerApplication` — holds the singleton `AppDatabase` and `PatchRepository` via `by lazy`; `MainActivity` pulls the repository off `(application as PatchTrackerApplication).repository` for the ViewModel factory. There is no DI framework.
@@ -65,6 +65,10 @@ sqlite3 /tmp/db/patch_tracker.db "SELECT * FROM patch_types;"
 ### Status/fulfillment model
 
 A `PatchAward` has `awardedAtTime: Boolean` and a nullable `fulfilledDate`. `isOutstanding` (an extension property, defined outside the entity so Room doesn't try to persist it) is `!awardedAtTime && fulfilledDate == null`. There's no separate "status" enum — UI derives the Awarded/Owed badge from those two fields everywhere (`PatchAwardDetails.isOutstanding` mirrors the same logic for the joined list projection).
+
+### Team roster model
+
+A `Team` has a `name` and `division` (a division is a property of the team, not the player — a player's division at a point in time is instead recorded per patch award, see above). Membership is many-to-many via the `team_members` join table (`TeamMember(teamId, playerId)`, cascading deletes both ways), capped at `MAX_TEAM_PLAYERS = 8` (defined in `Team.kt`). `TeamEditScreen` doesn't diff the roster on save — `PatchRepository.addTeam`/`updateTeam` call `TeamDao.setMembers`, which clears and re-inserts the whole membership list in one `@Transaction`, so the ViewModel/UI only ever deals with "the current set of selected player IDs," never incremental add/remove calls.
 
 ## Project logs
 

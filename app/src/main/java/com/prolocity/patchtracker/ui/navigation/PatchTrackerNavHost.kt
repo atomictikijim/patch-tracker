@@ -3,6 +3,7 @@ package com.prolocity.patchtracker.ui.navigation
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
@@ -30,12 +31,15 @@ import com.prolocity.patchtracker.ui.patches.PatchListScreen
 import com.prolocity.patchtracker.ui.patchtypes.PatchTypesScreen
 import com.prolocity.patchtracker.ui.players.PlayerEditScreen
 import com.prolocity.patchtracker.ui.players.PlayerListScreen
+import com.prolocity.patchtracker.ui.teams.TeamEditScreen
+import com.prolocity.patchtracker.ui.teams.TeamListScreen
 
 private data class TopLevelTab(val route: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
 
 private val topLevelTabs = listOf(
     TopLevelTab(Routes.PATCHES, "Patches", Icons.Filled.Star),
     TopLevelTab(Routes.PLAYERS, "Players", Icons.Filled.Person),
+    TopLevelTab(Routes.TEAMS, "Teams", Icons.Filled.Groups),
     TopLevelTab(Routes.PATCH_TYPES, "Patch Types", Icons.AutoMirrored.Filled.List)
 )
 
@@ -118,6 +122,25 @@ fun PatchTrackerNavHost(viewModel: PatchTrackerViewModel) {
             }
             composable(Routes.PATCH_TYPES) {
                 PatchTypesScreen(viewModel = viewModel)
+            }
+            composable(Routes.TEAMS) {
+                TeamListScreen(
+                    viewModel = viewModel,
+                    onAddClick = { navController.navigate(Routes.teamEdit(Routes.NEW_ID)) },
+                    onEditClick = { id -> navController.navigate(Routes.teamEdit(id)) }
+                )
+            }
+            composable(
+                Routes.TEAM_EDIT_PATTERN,
+                arguments = listOf(navArgument("id") { type = NavType.LongType })
+            ) { entry ->
+                val id = entry.arguments?.getLong("id") ?: Routes.NEW_ID
+                TeamEditScreen(
+                    viewModel = viewModel,
+                    teamId = id,
+                    onDone = { navController.popBackStack() },
+                    onBack = { navController.popBackStack() }
+                )
             }
         }
     }
