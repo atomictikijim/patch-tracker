@@ -33,8 +33,8 @@ class PatchTrackerViewModel(private val repository: PatchRepository) : ViewModel
         viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList()
     )
 
-    fun addPlayer(name: String, playerNumber: String) = viewModelScope.launch {
-        repository.addPlayer(name, playerNumber)
+    fun addPlayer(name: String, playerNumber: String, phoneNumber: String?, email: String?) = viewModelScope.launch {
+        repository.addPlayer(name, playerNumber, phoneNumber, email)
     }
 
     fun updatePlayer(player: Player) = viewModelScope.launch {

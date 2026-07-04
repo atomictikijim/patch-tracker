@@ -72,6 +72,10 @@ A `Team` has a `name` and `division` (a division is a property of the team, not 
 
 `TeamEditScreen` opens in a read-only view (name, division, ordered player list with "— Captain" on the first slot) with an "Edit Team" button, rather than dropping straight into editable fields like the other entities' edit screens — saving an edit returns to the view, it doesn't pop back to the list. A brand-new team (`Routes.NEW_ID`) skips the view and opens directly in edit mode, since there's nothing yet to view.
 
+### Player detail view
+
+`PlayerEditScreen` follows the same view/edit-mode pattern as `TeamEditScreen`: opening an existing player shows a read-only summary (name, number, optional `phoneNumber`/`email`) with an "Edit Player" button; a brand-new player (`Routes.NEW_ID`) skips straight to edit mode. The view also lists the player's earned patches (grouped by `patchTypeId`, with a "×N" count) and the teams they're a member of — both derived by filtering the existing `viewModel.patchAwards`/`viewModel.teams` flows client-side rather than adding dedicated per-player DAO queries, since those flows are already loaded app-wide for the Patches/Teams tabs.
+
 ## Project logs
 
 Two files at the repo root track project history and stay current across sessions — read them at the start of a session when they're relevant to the task, and update them as part of finishing one:

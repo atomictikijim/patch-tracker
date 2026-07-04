@@ -16,8 +16,8 @@ class PatchRepository(
 
     suspend fun getPlayer(id: Long): Player? = playerDao.getById(id)
 
-    suspend fun addPlayer(name: String, playerNumber: String): Long =
-        playerDao.insert(Player(name = name, playerNumber = playerNumber))
+    suspend fun addPlayer(name: String, playerNumber: String, phoneNumber: String?, email: String?): Long =
+        playerDao.insert(Player(name = name, playerNumber = playerNumber, phoneNumber = phoneNumber, email = email))
 
     suspend fun updatePlayer(player: Player) = playerDao.update(player)
 
