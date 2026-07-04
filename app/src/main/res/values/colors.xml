@@ -1,3 +1,4 @@
 <resources>
-    <color name="ic_launcher_background">#FFFFFF</color>
+    <!-- Felt green sampled from the icon art; shows during launcher parallax edge-reveal. -->
+    <color name="ic_launcher_background">#2E7A5A</color>
 </resources>
