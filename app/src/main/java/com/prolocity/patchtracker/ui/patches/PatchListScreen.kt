@@ -39,6 +39,7 @@ import com.prolocity.patchtracker.ui.PatchTrackerViewModel
 import com.prolocity.patchtracker.ui.components.BrandTopAppBar
 import com.prolocity.patchtracker.ui.components.ConfirmDialog
 import com.prolocity.patchtracker.ui.components.DateBadge
+import com.prolocity.patchtracker.ui.components.PatchIcon
 import com.prolocity.patchtracker.ui.components.StatusBadge
 import com.prolocity.patchtracker.ui.components.formatted
 
@@ -149,11 +150,23 @@ private fun PatchAwardRow(
         DateBadge(date = award.dateEarned)
 
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = award.patchName,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                PatchIcon(
+                    name = award.patchName,
+                    iconKey = award.patchIconKey,
+                    badgeText = award.patchBadgeText,
+                    imagePath = award.patchImagePath,
+                    size = 28.dp
+                )
+                Text(
+                    text = award.patchName,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
             Text(
                 text = "${award.playerName} · #${award.playerNumber}",
                 style = MaterialTheme.typography.bodyMedium

@@ -181,38 +181,6 @@ fun ConfirmDialog(
 }
 
 @Composable
-fun TextPromptDialog(
-    title: String,
-    label: String,
-    initialValue: String = "",
-    onConfirm: (String) -> Unit,
-    onDismiss: () -> Unit
-) {
-    var value by remember { mutableStateOf(initialValue) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(title, fontWeight = FontWeight.Bold) },
-        text = {
-            OutlinedTextField(
-                value = value,
-                onValueChange = { value = it },
-                label = { Text(label) },
-                singleLine = true
-            )
-        },
-        confirmButton = {
-            TextButton(
-                onClick = { onConfirm(value.trim()) },
-                enabled = value.isNotBlank()
-            ) { Text("Save", fontWeight = FontWeight.Bold) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
-        }
-    )
-}
-
-@Composable
 fun SaveButton(enabled: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Button(
         onClick = onClick,

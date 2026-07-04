@@ -39,9 +39,10 @@ import com.prolocity.patchtracker.ui.PatchTrackerViewModel
 import com.prolocity.patchtracker.ui.components.BrandTopAppBar
 import com.prolocity.patchtracker.ui.components.ConfirmDialog
 import com.prolocity.patchtracker.ui.components.DatePickerField
+import com.prolocity.patchtracker.ui.components.PatchTypeFormDialog
+import com.prolocity.patchtracker.ui.components.PatchTypeIcon
 import com.prolocity.patchtracker.ui.components.SaveButton
 import com.prolocity.patchtracker.ui.components.SectionLabel
-import com.prolocity.patchtracker.ui.components.TextPromptDialog
 import com.prolocity.patchtracker.ui.navigation.Routes
 import java.time.LocalDate
 
@@ -225,13 +226,12 @@ fun PatchEditScreen(
     }
 
     if (showAddPatchTypeDialog) {
-        TextPromptDialog(
+        PatchTypeFormDialog(
             title = "Add Patch Type",
-            label = "Patch name",
-            onConfirm = { name ->
+            onSave = { name, imagePath ->
                 if (name.isNotBlank()) {
                     pendingNewPatchTypeName = name
-                    viewModel.addPatchType(name)
+                    viewModel.addPatchType(name, imagePath)
                 }
                 showAddPatchTypeDialog = false
             },
@@ -304,6 +304,7 @@ private fun PatchTypeDropdown(
             readOnly = true,
             label = { Text("Patch") },
             placeholder = { Text("Select a patch") },
+            leadingIcon = selected?.let { { PatchTypeIcon(patchType = it, size = 28.dp) } },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier.fillMaxWidth().menuAnchor()
         )
@@ -314,6 +315,7 @@ private fun PatchTypeDropdown(
             patchTypes.forEach { patchType ->
                 DropdownMenuItem(
                     text = { Text(patchType.name) },
+                    leadingIcon = { PatchTypeIcon(patchType = patchType, size = 28.dp) },
                     onClick = {
                         onSelected(patchType)
                         expanded = false

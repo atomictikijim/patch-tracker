@@ -21,10 +21,10 @@ class PatchRepository(
 
     suspend fun deletePlayer(player: Player) = playerDao.delete(player)
 
-    suspend fun addPatchType(name: String): Long {
+    suspend fun addPatchType(name: String, imagePath: String? = null): Long {
         val trimmed = name.trim()
         patchTypeDao.findByName(trimmed)?.let { return it.id }
-        return patchTypeDao.insert(PatchType(name = trimmed))
+        return patchTypeDao.insert(PatchType(name = trimmed, imagePath = imagePath))
     }
 
     suspend fun updatePatchType(patchType: PatchType) = patchTypeDao.update(patchType)

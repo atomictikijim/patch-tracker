@@ -34,7 +34,8 @@ import com.prolocity.patchtracker.data.PatchType
 import com.prolocity.patchtracker.ui.PatchTrackerViewModel
 import com.prolocity.patchtracker.ui.components.BrandTopAppBar
 import com.prolocity.patchtracker.ui.components.ConfirmDialog
-import com.prolocity.patchtracker.ui.components.TextPromptDialog
+import com.prolocity.patchtracker.ui.components.PatchTypeFormDialog
+import com.prolocity.patchtracker.ui.components.PatchTypeIcon
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,10 +64,11 @@ fun PatchTypesScreen(viewModel: PatchTrackerViewModel) {
             ) {
                 items(patchTypes, key = { it.id }) { patchType ->
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(start = 16.dp),
+                        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 8.dp, bottom = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
+                        PatchTypeIcon(patchType = patchType)
                         Text(patchType.name, modifier = Modifier.weight(1f))
                         IconButton(onClick = { editing = patchType }) {
                             Icon(Icons.Filled.Edit, contentDescription = "Rename")
@@ -86,11 +88,10 @@ fun PatchTypesScreen(viewModel: PatchTrackerViewModel) {
     }
 
     if (showAddDialog) {
-        TextPromptDialog(
+        PatchTypeFormDialog(
             title = "Add Patch Type",
-            label = "Patch name",
-            onConfirm = { name ->
-                if (name.isNotBlank()) viewModel.addPatchType(name)
+            onSave = { name, imagePath ->
+                if (name.isNotBlank()) viewModel.addPatchType(name, imagePath)
                 showAddDialog = false
             },
             onDismiss = { showAddDialog = false }
@@ -98,12 +99,12 @@ fun PatchTypesScreen(viewModel: PatchTrackerViewModel) {
     }
 
     editing?.let { patchType ->
-        TextPromptDialog(
-            title = "Rename Patch Type",
-            label = "Patch name",
-            initialValue = patchType.name,
-            onConfirm = { name ->
-                if (name.isNotBlank()) viewModel.updatePatchType(patchType.copy(name = name))
+        PatchTypeFormDialog(
+            title = "Edit Patch Type",
+            initialName = patchType.name,
+            initialImagePath = patchType.imagePath,
+            onSave = { name, imagePath ->
+                if (name.isNotBlank()) viewModel.updatePatchType(patchType.copy(name = name, imagePath = imagePath))
                 editing = null
             },
             onDismiss = { editing = null }

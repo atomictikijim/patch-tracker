@@ -12,7 +12,7 @@ import kotlinx.coroutines.launch
 
 @Database(
     entities = [Player::class, PatchType::class, PatchAward::class],
-    version = 1,
+    version = 3,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -33,15 +33,22 @@ abstract class AppDatabase : RoomDatabase() {
                     "patch_tracker.db"
                 )
                     .addCallback(object : RoomDatabase.Callback() {
-                        override fun onCreate(db: SupportSQLiteDatabase) {
-                            super.onCreate(db)
+                        // Runs on every open (not just first creation) so the default catalog is
+                        // restored after a destructive migration, using unique-name IGNORE inserts
+                        // so it never duplicates patches the league already has.
+                        override fun onOpen(db: SupportSQLiteDatabase) {
+                            super.onOpen(db)
                             scope.launch(Dispatchers.IO) {
                                 INSTANCE?.patchTypeDao()?.insertAll(
-                                    DefaultPatchTypes.NAMES.map { PatchType(name = it) }
+                                    DefaultPatchTypes.SEEDS.map {
+                                        PatchType(name = it.name, iconKey = it.iconKey, badgeText = it.badgeText)
+                                    }
                                 )
                             }
                         }
                     })
+                    // Pre-release schema: no real user data to preserve across patch-catalog updates.
+                    .fallbackToDestructiveMigration()
                     .build()
                     .also { INSTANCE = it }
             }

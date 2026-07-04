@@ -41,8 +41,8 @@ class PatchTrackerViewModel(private val repository: PatchRepository) : ViewModel
 
     suspend fun getPlayer(id: Long): Player? = repository.getPlayer(id)
 
-    fun addPatchType(name: String, onAdded: (Long) -> Unit = {}) = viewModelScope.launch {
-        val id = repository.addPatchType(name)
+    fun addPatchType(name: String, imagePath: String? = null, onAdded: (Long) -> Unit = {}) = viewModelScope.launch {
+        val id = repository.addPatchType(name, imagePath)
         onAdded(id)
     }
 
