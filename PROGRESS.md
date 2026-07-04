@@ -2,7 +2,7 @@
 
 ## Current state
 
-Functional MVP, verified end-to-end on a physical device. Tracks a player roster, a 31-patch real-APA catalog (with a per-category icon system plus camera-captured photos for custom patches), and patch awards with Awarded/Owed status and later fulfillment-date tracking. All work through 2026-07-04 is committed — see `NOTES.md` for the decision/bug log behind it.
+Functional MVP, verified end-to-end on a physical device. Tracks a player roster, a 33-patch real-APA catalog (with a per-category icon system plus camera-captured photos for custom patches), and patch awards with Awarded/Owed status and later fulfillment-date tracking. All work through 2026-07-04 is committed — see `NOTES.md` for the decision/bug log behind it.
 
 **No open blockers.**
 
@@ -25,3 +25,4 @@ None pending. Pick from "Suggested next steps" below by priority, or continue wi
 - Built the initial app end-to-end: Room + Compose + Navigation, Players/Patches/Patch Types screens, Awarded/Owed status with fulfillment tracking. Restyled to an APA Scorekeeper-inspired look (league-blue theme, flat list rows, date-chip badges). Committed and tagged `v0.1`.
 - Replaced the placeholder patch catalog with the real 31-patch APA list, added an original per-category icon system, and added camera capture for custom patch photos. Fixed a badge-overflow rendering bug and a seed-catalog-lost-on-migration bug along the way. Committed.
 - Added `CLAUDE.md` (build commands, architecture, working conventions) and this NOTES.md/PROGRESS.md pair, replacing stray files from an unrelated project that had been sitting in the repo root. Committed.
+- Split the single "Clean Sweep" patch type into "8-Ball Clean Sweep" and "9-Ball Clean Sweep" (per-game variants, matching the pattern of Mini Slam/Break and Run), bumped `AppDatabase` to version 4, and verified both appear correctly on a physical device. Committed.

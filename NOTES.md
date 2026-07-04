@@ -77,3 +77,9 @@ Add an entry whenever:
 **What happened:** `NOTES.md` and `PROGRESS.md` already existed at the repo root but contained content from an unrelated Salesforce project ("PCSPartial" — Opportunity flow/Process Builder conversions). They predated this project's git history and were never part of any PatchTracker work.
 **Resolution / decision:** Replaced both files with PatchTracker-specific content (this file, and `PROGRESS.md`) rather than merging or preserving the unrelated content.
 **Related metadata:** —
+
+### 2026-07-04 — Clean Sweep split into 8-ball/9-ball variants
+**Type:** Decision
+**What happened:** The catalog had a single game-agnostic "Clean Sweep" patch under Miscellaneous, but APA actually awards it per game type like Mini Slam/Break and Run/etc.
+**Resolution / decision:** Replaced the single seed with "8-Ball Clean Sweep" and "9-Ball Clean Sweep", moved into their respective 8-Ball/9-Ball sections, both keeping the existing `clean_sweep` iconKey. Bumped `AppDatabase` to version 4 per the CLAUDE.md rule for catalog shape changes — `fallbackToDestructiveMigration()` wipes and reseeds, which also drops the now-orphaned old "Clean Sweep" row (acceptable pre-release, no prod data).
+**Related metadata:** `DefaultPatchTypes.kt`, `AppDatabase.kt`
