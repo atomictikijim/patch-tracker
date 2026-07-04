@@ -151,13 +151,6 @@ fun PatchEditScreen(
                 onSelected = { selectedPlayer = it }
             )
 
-            PatchTypeDropdown(
-                patchTypes = patchTypes,
-                selected = selectedPatchType,
-                onSelected = { selectedPatchType = it },
-                onAddNew = { showAddPatchTypeDialog = true }
-            )
-
             OutlinedTextField(
                 value = session,
                 onValueChange = { session = it },
@@ -178,6 +171,13 @@ fun PatchEditScreen(
                 date = dateEarned,
                 onDateSelected = { dateEarned = it },
                 modifier = Modifier.fillMaxWidth()
+            )
+
+            PatchTypeDropdown(
+                patchTypes = patchTypes,
+                selected = selectedPatchType,
+                onSelected = { selectedPatchType = it },
+                onAddNew = { showAddPatchTypeDialog = true }
             )
 
             Column {
