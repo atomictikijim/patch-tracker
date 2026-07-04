@@ -45,6 +45,7 @@ sqlite3 /tmp/db/patch_tracker.db "SELECT * FROM patch_types;"
 **Stack:** Kotlin, Jetpack Compose (Material3), Room (SQLite), Navigation-Compose, Coil (image loading). Package root: `com.prolocity.patchtracker`. `minSdk` 26 (Android 8.0) — `java.time` is used directly with no desugaring needed.
 
 **Layers**, in dependency order:
+
 - `data/` — Room entities (`Player`, `PatchType`, `PatchAward`), DAOs, `AppDatabase`, and `PatchRepository`, which is the single point every ViewModel talks to. `PatchAwardDetails` is a hand-written join projection (not an entity) returned by `PatchAwardDao.getAllDetails()` — it flattens a patch award with its player and patch-type fields for list display in one query.
 - `ui/PatchTrackerViewModel.kt` — one shared ViewModel for the whole app (not one per screen), exposed via `PatchTrackerViewModelFactory`. It wraps repository `Flow`s as `StateFlow`s and exposes suspend/launch wrapper functions for writes.
 - `ui/navigation/` — `Routes` (string constants + argument builders) and `PatchTrackerNavHost`, which owns the bottom `NavigationBar` (Patches / Players / Patch Types) and the `NavHost` graph, including the two edit-screen routes parameterized by a `Long` id (`Routes.NEW_ID = 0L` means "create new").
@@ -65,9 +66,18 @@ sqlite3 /tmp/db/patch_tracker.db "SELECT * FROM patch_types;"
 
 A `PatchAward` has `awardedAtTime: Boolean` and a nullable `fulfilledDate`. `isOutstanding` (an extension property, defined outside the entity so Room doesn't try to persist it) is `!awardedAtTime && fulfilledDate == null`. There's no separate "status" enum — UI derives the Awarded/Owed badge from those two fields everywhere (`PatchAwardDetails.isOutstanding` mirrors the same logic for the joined list projection).
 
+## Project logs
+
+Two files at the repo root track project history and stay current across sessions — read them at the start of a session when they're relevant to the task, and update them as part of finishing one:
+
+- **`NOTES.md`** — an append-only log of decisions, deviations, and notable bugs (with root cause + fix), each dated. Add an entry for anything a future session would otherwise have to rediscover: a rejected alternative and why, a platform/library quirk that cost time, a deliberate scope cut. Don't log routine changes here — this is for things that aren't obvious from reading the code.
+- **`PROGRESS.md`** — current state, next action, a running "suggested next steps" list, and a terse dated log of what got done per session. Update the "Current state"/"Next action" section whenever they change, and append a one-paragraph log entry for the session at the end of it.
+
+Both are Markdown, not code — editing them doesn't need the build/test loop below, but treat them as part of "finishing the work," not optional cleanup.
+
 ## Working conventions
 
-- **Always commit at the end of a change that alters app functionality** (not for pure exploration/investigation turns). Use a descriptive commit message; don't ask first unless the change is large/destructive or the user hasn't otherwise approved committing in that turn.
+- **Always commit at the end of a change that alters app functionality** (not for pure exploration/investigation turns). Use a descriptive commit message; don't ask first unless the change is large/destructive or the user hasn't otherwise approved committing in that turn. If `NOTES.md`/`PROGRESS.md` were updated in the same turn, include them in the same commit (or a clearly-linked one).
 - After a UI-affecting change, build the debug APK, install it on the connected device, and drive the actual flow with `adb shell input tap/text` + `adb shell screencap` — don't rely on compile success alone to declare a UI change done.
 - The device auto-rotates and this silently breaks tap-coordinate scripts (screenshots come back at a different resolution, e.g. 2000x1200 instead of 1200x2000). If taps stop landing where expected, check screenshot dimensions before re-deriving coordinates, and consider locking rotation for the session: `adb shell settings put system accelerometer_rotation 0 && adb shell settings put system user_rotation 0` (restore with `accelerometer_rotation 1` when done).
 - Compose `AlertDialog`'s back-press dismisses the dialog via `onDismissRequest` — don't use the back button to dismiss a keyboard mid-dialog in manual test scripts; it discards the dialog's state.
