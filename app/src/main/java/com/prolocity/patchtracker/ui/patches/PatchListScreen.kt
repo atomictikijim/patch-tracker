@@ -120,6 +120,7 @@ fun PatchListScreen(
                         playerId = award.playerId,
                         patchTypeId = award.patchTypeId,
                         session = award.session,
+                        division = award.division,
                         dateEarned = award.dateEarned,
                         awardedAtTime = award.awardedAtTime,
                         fulfilledDate = award.fulfilledDate
@@ -168,7 +169,7 @@ private fun PatchAwardRow(
                 )
             }
             Text(
-                text = "${award.playerName} · #${award.playerNumber}",
+                text = "${award.playerName} · #${award.playerNumber} · Div ${award.division}",
                 style = MaterialTheme.typography.bodyMedium
             )
             Text(

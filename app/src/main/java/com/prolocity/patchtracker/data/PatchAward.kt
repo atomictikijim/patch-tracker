@@ -29,6 +29,7 @@ data class PatchAward(
     val playerId: Long,
     val patchTypeId: Long,
     val session: String,
+    val division: String,
     val dateEarned: LocalDate,
     // True if the patch was physically handed to the player when it was earned.
     val awardedAtTime: Boolean,

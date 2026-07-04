@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -30,6 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.prolocity.patchtracker.data.PatchAward
@@ -64,6 +66,7 @@ fun PatchEditScreen(
     var selectedPlayer by remember { mutableStateOf<Player?>(null) }
     var selectedPatchType by remember { mutableStateOf<PatchType?>(null) }
     var session by remember { mutableStateOf("") }
+    var division by remember { mutableStateOf("") }
     var dateEarned by remember { mutableStateOf(LocalDate.now()) }
     var awardedAtTime by remember { mutableStateOf(true) }
     var fulfilled by remember { mutableStateOf(false) }
@@ -79,6 +82,7 @@ fun PatchEditScreen(
             existing = award
             if (award != null) {
                 session = award.session
+                division = award.division
                 dateEarned = award.dateEarned
                 awardedAtTime = award.awardedAtTime
                 fulfilled = award.fulfilledDate != null
@@ -110,7 +114,7 @@ fun PatchEditScreen(
         }
     }
 
-    val canSave = selectedPlayer != null && selectedPatchType != null && session.isNotBlank()
+    val canSave = selectedPlayer != null && selectedPatchType != null && session.isNotBlank() && division.isNotBlank()
 
     Scaffold(
         topBar = {
@@ -158,6 +162,14 @@ fun PatchEditScreen(
                 value = session,
                 onValueChange = { session = it },
                 label = { Text("Session (e.g. 2026 Summer)") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            OutlinedTextField(
+                value = division,
+                onValueChange = { division = it },
+                label = { Text("Division") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -214,6 +226,7 @@ fun PatchEditScreen(
                         playerId = selectedPlayer!!.id,
                         patchTypeId = selectedPatchType!!.id,
                         session = session.trim(),
+                        division = division.trim(),
                         dateEarned = dateEarned,
                         awardedAtTime = awardedAtTime,
                         fulfilledDate = if (!awardedAtTime && fulfilled) fulfilledDate else null

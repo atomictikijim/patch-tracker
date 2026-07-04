@@ -13,6 +13,7 @@ data class PatchAwardDetails(
     val patchBadgeText: String?,
     val patchImagePath: String?,
     val session: String,
+    val division: String,
     val dateEarned: LocalDate,
     val awardedAtTime: Boolean,
     val fulfilledDate: LocalDate?

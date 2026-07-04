@@ -21,6 +21,7 @@ interface PatchAwardDao {
                pt.badgeText AS patchBadgeText,
                pt.imagePath AS patchImagePath,
                pa.session AS session,
+               pa.division AS division,
                pa.dateEarned AS dateEarned,
                pa.awardedAtTime AS awardedAtTime,
                pa.fulfilledDate AS fulfilledDate
