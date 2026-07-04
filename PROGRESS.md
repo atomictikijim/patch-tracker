@@ -12,7 +12,6 @@ None pending. Pick from "Suggested next steps" below by priority, or continue wi
 
 ## Suggested next steps
 
-- **App icon** — still the default Android Studio Compose template icon (green arrow), not a custom Patch Tracker icon.
 - **Tests** — `ExampleInstrumentedTest.kt` / `ExampleUnitTest.kt` are untouched template stubs. Nothing exercises the DAOs, the Awarded/Owed/fulfillment logic, or the patch-icon spec mapping.
 - **Real Room migrations** — `AppDatabase` uses `fallbackToDestructiveMigration()`, a deliberate pre-release convenience (see NOTES.md, 2026-07-04). Before this app holds real league data on a device that matters, replace it with proper `Migration` objects so a future schema change doesn't silently wipe patch history.
 - **Backup/export** — no way to get data off the device. If the tablet is lost, reset, or the app is uninstalled, all patch history is gone. Consider CSV/JSON export at minimum.
@@ -26,3 +25,4 @@ None pending. Pick from "Suggested next steps" below by priority, or continue wi
 - Replaced the placeholder patch catalog with the real 31-patch APA list, added an original per-category icon system, and added camera capture for custom patch photos. Fixed a badge-overflow rendering bug and a seed-catalog-lost-on-migration bug along the way. Committed.
 - Added `CLAUDE.md` (build commands, architecture, working conventions) and this NOTES.md/PROGRESS.md pair, replacing stray files from an unrelated project that had been sitting in the repo root. Committed.
 - Split the single "Clean Sweep" patch type into "8-Ball Clean Sweep" and "9-Ball Clean Sweep" (per-game variants, matching the pattern of Mini Slam/Break and Run), bumped `AppDatabase` to version 4, and verified both appear correctly on a physical device. Committed.
+- Replaced the default Android Studio green-arrow app icon with the "What Comes Next?" logo (adaptive icon: white background + inset logo bitmap as foreground), verified on a physical device. Committed.
