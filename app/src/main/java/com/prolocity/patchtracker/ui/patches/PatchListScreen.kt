@@ -1,5 +1,6 @@
 package com.prolocity.patchtracker.ui.patches
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -9,8 +10,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
@@ -31,10 +34,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.prolocity.patchtracker.data.PatchAwardDetails
+import coil.compose.AsyncImage
+import com.prolocity.patchtracker.data.PatchAwardEvent
+import com.prolocity.patchtracker.data.PatchAwardLineDetails
 import com.prolocity.patchtracker.ui.PatchTrackerViewModel
 import com.prolocity.patchtracker.ui.components.BrandTopAppBar
 import com.prolocity.patchtracker.ui.components.ConfirmDialog
@@ -42,8 +49,22 @@ import com.prolocity.patchtracker.ui.components.DateBadge
 import com.prolocity.patchtracker.ui.components.PatchIcon
 import com.prolocity.patchtracker.ui.components.StatusBadge
 import com.prolocity.patchtracker.ui.components.formatted
+import java.io.File
+import java.time.LocalDate
 
 private enum class StatusFilter(val label: String) { ALL("All"), AWARDED("Awarded"), OWED("Owed") }
+
+private data class PatchEventGroup(
+    val eventId: Long,
+    val playerId: Long,
+    val playerName: String,
+    val playerNumber: String,
+    val session: String,
+    val division: String,
+    val dateEarned: LocalDate,
+    val photoPath: String?,
+    val lines: List<PatchAwardLineDetails>
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,13 +75,33 @@ fun PatchListScreen(
 ) {
     val patchAwards by viewModel.patchAwards.collectAsStateWithLifecycle()
     var filter by remember { mutableStateOf(StatusFilter.ALL) }
-    var pendingDelete by remember { mutableStateOf<PatchAwardDetails?>(null) }
+    var pendingDelete by remember { mutableStateOf<PatchEventGroup?>(null) }
 
-    val filtered = remember(patchAwards, filter) {
-        when (filter) {
-            StatusFilter.ALL -> patchAwards
-            StatusFilter.AWARDED -> patchAwards.filter { !it.isOutstanding }
-            StatusFilter.OWED -> patchAwards.filter { it.isOutstanding }
+    val groups = remember(patchAwards) {
+        patchAwards.groupBy { it.eventId }.map { (eventId, lines) ->
+            val first = lines.first()
+            PatchEventGroup(
+                eventId = eventId,
+                playerId = first.playerId,
+                playerName = first.playerName,
+                playerNumber = first.playerNumber,
+                session = first.session,
+                division = first.division,
+                dateEarned = first.dateEarned,
+                photoPath = first.photoPath,
+                lines = lines
+            )
+        }.sortedWith(compareByDescending<PatchEventGroup> { it.dateEarned }.thenBy { it.playerName })
+    }
+
+    val filtered = remember(groups, filter) {
+        groups.mapNotNull { group ->
+            val matching = when (filter) {
+                StatusFilter.ALL -> group.lines
+                StatusFilter.AWARDED -> group.lines.filter { !it.isOutstanding }
+                StatusFilter.OWED -> group.lines.filter { it.isOutstanding }
+            }
+            if (matching.isEmpty()) null else group.copy(lines = matching)
         }
     }
 
@@ -68,7 +109,7 @@ fun PatchListScreen(
         topBar = { BrandTopAppBar(title = "Patch Tracker") },
         floatingActionButton = {
             FloatingActionButton(onClick = onAddClick) {
-                Icon(Icons.Filled.Add, contentDescription = "Add patch")
+                Icon(Icons.Filled.Add, contentDescription = "Add patch award")
             }
         }
     ) { innerPadding ->
@@ -89,18 +130,18 @@ fun PatchListScreen(
             if (filtered.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
-                        text = if (patchAwards.isEmpty()) "No patches logged yet. Tap + to add one." else "No patches match this filter.",
+                        text = if (groups.isEmpty()) "No patches logged yet. Tap + to add one." else "No patches match this filter.",
                         style = MaterialTheme.typography.bodyLarge
                     )
                 }
             } else {
                 LazyColumn(contentPadding = PaddingValues(bottom = 16.dp)) {
-                    items(filtered, key = { it.id }) { award ->
-                        PatchAwardRow(
-                            award = award,
-                            onClick = { onEditClick(award.id) },
-                            onDeleteClick = { pendingDelete = award },
-                            onMarkFulfilled = { viewModel.markFulfilled(award.id) }
+                    items(filtered, key = { it.eventId }) { group ->
+                        PatchEventRow(
+                            group = group,
+                            onClick = { onEditClick(group.eventId) },
+                            onDeleteClick = { pendingDelete = group },
+                            onMarkFulfilled = { lineId -> viewModel.markLineFulfilled(lineId) }
                         )
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     }
@@ -109,21 +150,19 @@ fun PatchListScreen(
         }
     }
 
-    pendingDelete?.let { award ->
+    pendingDelete?.let { group ->
         ConfirmDialog(
-            title = "Delete patch record?",
-            text = "This removes the ${award.patchName} record for ${award.playerName}.",
+            title = "Delete patch award?",
+            text = "This removes every patch in this award entry for ${group.playerName}.",
             onConfirm = {
-                viewModel.deletePatchAward(
-                    com.prolocity.patchtracker.data.PatchAward(
-                        id = award.id,
-                        playerId = award.playerId,
-                        patchTypeId = award.patchTypeId,
-                        session = award.session,
-                        division = award.division,
-                        dateEarned = award.dateEarned,
-                        awardedAtTime = award.awardedAtTime,
-                        fulfilledDate = award.fulfilledDate
+                viewModel.deletePatchAwardEvent(
+                    PatchAwardEvent(
+                        id = group.eventId,
+                        playerId = group.playerId,
+                        session = group.session,
+                        division = group.division,
+                        dateEarned = group.dateEarned,
+                        photoPath = group.photoPath
                     )
                 )
                 pendingDelete = null
@@ -134,11 +173,11 @@ fun PatchListScreen(
 }
 
 @Composable
-private fun PatchAwardRow(
-    award: PatchAwardDetails,
+private fun PatchEventRow(
+    group: PatchEventGroup,
     onClick: () -> Unit,
     onDeleteClick: () -> Unit,
-    onMarkFulfilled: () -> Unit
+    onMarkFulfilled: (Long) -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -148,52 +187,52 @@ private fun PatchAwardRow(
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        DateBadge(date = award.dateEarned)
+        DateBadge(date = group.dateEarned)
 
         Column(modifier = Modifier.weight(1f)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                PatchIcon(
-                    name = award.patchName,
-                    iconKey = award.patchIconKey,
-                    badgeText = award.patchBadgeText,
-                    imagePath = award.patchImagePath,
-                    size = 28.dp
-                )
-                Text(
-                    text = award.patchName,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            }
             Text(
-                text = "${award.playerName} · #${award.playerNumber} · Div ${award.division}",
-                style = MaterialTheme.typography.bodyMedium
+                text = "${group.playerName} · #${group.playerNumber} · Div ${group.division}",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
             )
             Text(
-                text = "Session: ${award.session}",
+                text = "Session: ${group.session}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            if (!award.awardedAtTime && award.fulfilledDate != null) {
-                Text(
-                    text = "Fulfilled: ${award.fulfilledDate.formatted()}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                StatusBadge(awarded = !award.isOutstanding)
-                if (award.isOutstanding) {
-                    TextButton(onClick = onMarkFulfilled) { Text("Mark Fulfilled") }
+
+            group.lines.forEach { line ->
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    PatchIcon(
+                        name = line.patchName,
+                        iconKey = line.patchIconKey,
+                        badgeText = line.patchBadgeText,
+                        imagePath = line.patchImagePath,
+                        size = 24.dp
+                    )
+                    Text(line.patchName, modifier = Modifier.weight(1f))
+                    StatusBadge(awarded = !line.isOutstanding)
+                    if (line.isOutstanding) {
+                        TextButton(onClick = { onMarkFulfilled(line.lineId) }) { Text("Mark Fulfilled") }
+                    }
                 }
             }
+        }
+
+        if (!group.photoPath.isNullOrBlank()) {
+            AsyncImage(
+                model = File(group.photoPath),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+            )
         }
 
         IconButton(onClick = onDeleteClick) {

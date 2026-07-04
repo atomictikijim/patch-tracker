@@ -11,8 +11,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Database(
-    entities = [Player::class, PatchType::class, PatchAward::class, Team::class, TeamMember::class],
-    version = 8,
+    entities = [Player::class, PatchType::class, PatchAwardEvent::class, PatchAwardLine::class, Team::class, TeamMember::class],
+    version = 9,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

@@ -11,7 +11,7 @@ class PatchRepository(
 ) {
     val players: Flow<List<Player>> = playerDao.getAll()
     val patchTypes: Flow<List<PatchType>> = patchTypeDao.getAll()
-    val patchAwards: Flow<List<PatchAwardDetails>> = patchAwardDao.getAllDetails()
+    val patchAwards: Flow<List<PatchAwardLineDetails>> = patchAwardDao.getAllLineDetails()
     val teams: Flow<List<TeamWithMembers>> = teamDao.getAllWithMembers()
 
     suspend fun getPlayer(id: Long): Player? = playerDao.getById(id)
@@ -33,17 +33,26 @@ class PatchRepository(
 
     suspend fun deletePatchType(patchType: PatchType) = patchTypeDao.delete(patchType)
 
-    suspend fun getPatchAward(id: Long): PatchAward? = patchAwardDao.getById(id)
+    suspend fun getPatchAwardEvent(id: Long): PatchAwardEvent? = patchAwardDao.getEventById(id)
 
-    suspend fun addPatchAward(award: PatchAward): Long = patchAwardDao.insert(award)
+    suspend fun getPatchAwardLines(eventId: Long): List<PatchAwardLine> = patchAwardDao.getLinesForEvent(eventId)
 
-    suspend fun updatePatchAward(award: PatchAward) = patchAwardDao.update(award)
+    suspend fun addPatchAwardEvent(event: PatchAwardEvent, lines: List<PatchAwardLine>): Long {
+        val id = patchAwardDao.insertEvent(event)
+        lines.forEach { patchAwardDao.insertLine(it.copy(id = 0, eventId = id)) }
+        return id
+    }
 
-    suspend fun deletePatchAward(award: PatchAward) = patchAwardDao.delete(award)
+    suspend fun updatePatchAwardEvent(event: PatchAwardEvent, lines: List<PatchAwardLine>) {
+        patchAwardDao.updateEvent(event)
+        patchAwardDao.setLines(event.id, lines)
+    }
 
-    suspend fun markFulfilled(id: Long, date: LocalDate) {
-        val award = patchAwardDao.getById(id) ?: return
-        patchAwardDao.update(award.copy(fulfilledDate = date))
+    suspend fun deletePatchAwardEvent(event: PatchAwardEvent) = patchAwardDao.deleteEvent(event)
+
+    suspend fun markLineFulfilled(lineId: Long, date: LocalDate) {
+        val line = patchAwardDao.getLineById(lineId) ?: return
+        patchAwardDao.updateLine(line.copy(fulfilledDate = date))
     }
 
     suspend fun getTeam(id: Long): Team? = teamDao.getById(id)

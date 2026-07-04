@@ -3,7 +3,8 @@ package com.prolocity.patchtracker.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.prolocity.patchtracker.data.PatchAward
+import com.prolocity.patchtracker.data.PatchAwardEvent
+import com.prolocity.patchtracker.data.PatchAwardLine
 import com.prolocity.patchtracker.data.PatchRepository
 import com.prolocity.patchtracker.data.PatchType
 import com.prolocity.patchtracker.data.Player
@@ -60,22 +61,24 @@ class PatchTrackerViewModel(private val repository: PatchRepository) : ViewModel
         repository.deletePatchType(patchType)
     }
 
-    suspend fun getPatchAward(id: Long): PatchAward? = repository.getPatchAward(id)
+    suspend fun getPatchAwardEvent(id: Long): PatchAwardEvent? = repository.getPatchAwardEvent(id)
 
-    fun addPatchAward(award: PatchAward) = viewModelScope.launch {
-        repository.addPatchAward(award)
+    suspend fun getPatchAwardLines(eventId: Long): List<PatchAwardLine> = repository.getPatchAwardLines(eventId)
+
+    fun addPatchAwardEvent(event: PatchAwardEvent, lines: List<PatchAwardLine>) = viewModelScope.launch {
+        repository.addPatchAwardEvent(event, lines)
     }
 
-    fun updatePatchAward(award: PatchAward) = viewModelScope.launch {
-        repository.updatePatchAward(award)
+    fun updatePatchAwardEvent(event: PatchAwardEvent, lines: List<PatchAwardLine>) = viewModelScope.launch {
+        repository.updatePatchAwardEvent(event, lines)
     }
 
-    fun deletePatchAward(award: PatchAward) = viewModelScope.launch {
-        repository.deletePatchAward(award)
+    fun deletePatchAwardEvent(event: PatchAwardEvent) = viewModelScope.launch {
+        repository.deletePatchAwardEvent(event)
     }
 
-    fun markFulfilled(id: Long, date: LocalDate = LocalDate.now()) = viewModelScope.launch {
-        repository.markFulfilled(id, date)
+    fun markLineFulfilled(lineId: Long, date: LocalDate = LocalDate.now()) = viewModelScope.launch {
+        repository.markLineFulfilled(lineId, date)
     }
 
     suspend fun getTeam(id: Long): Team? = repository.getTeam(id)

@@ -1,17 +1,24 @@
 package com.prolocity.patchtracker.ui.patches
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -20,9 +27,12 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -31,10 +41,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.prolocity.patchtracker.data.PatchAward
+import coil.compose.AsyncImage
+import com.prolocity.patchtracker.data.PatchAwardEvent
+import com.prolocity.patchtracker.data.PatchAwardLine
 import com.prolocity.patchtracker.data.PatchType
 import com.prolocity.patchtracker.data.Player
 import com.prolocity.patchtracker.ui.PatchTrackerViewModel
@@ -45,8 +61,20 @@ import com.prolocity.patchtracker.ui.components.PatchTypeFormDialog
 import com.prolocity.patchtracker.ui.components.PatchTypeIcon
 import com.prolocity.patchtracker.ui.components.SaveButton
 import com.prolocity.patchtracker.ui.components.SectionLabel
+import com.prolocity.patchtracker.ui.components.createPatchPhotoFile
+import com.prolocity.patchtracker.ui.components.patchPhotoUriFor
 import com.prolocity.patchtracker.ui.navigation.Routes
+import java.io.File
 import java.time.LocalDate
+
+private data class PatchLineState(
+    val key: Long,
+    val lineId: Long,
+    val patchType: PatchType?,
+    val awardedAtTime: Boolean,
+    val fulfilled: Boolean,
+    val fulfilledDate: LocalDate
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,69 +85,103 @@ fun PatchEditScreen(
     onBack: () -> Unit
 ) {
     val isNew = patchAwardId == Routes.NEW_ID
+    val context = LocalContext.current
     val players by viewModel.players.collectAsStateWithLifecycle()
     val patchTypes by viewModel.patchTypes.collectAsStateWithLifecycle()
 
-    var loaded by remember { mutableStateOf(isNew) }
-    var existing by remember { mutableStateOf<PatchAward?>(null) }
+    var loaded by remember { mutableStateOf(false) }
+    var existing by remember { mutableStateOf<PatchAwardEvent?>(null) }
+    var rawLines by remember { mutableStateOf<List<PatchAwardLine>?>(null) }
+    var linesInitialized by remember { mutableStateOf(false) }
 
     var selectedPlayer by remember { mutableStateOf<Player?>(null) }
-    var selectedPatchType by remember { mutableStateOf<PatchType?>(null) }
     var session by remember { mutableStateOf("") }
     var division by remember { mutableStateOf("") }
     var dateEarned by remember { mutableStateOf(LocalDate.now()) }
-    var awardedAtTime by remember { mutableStateOf(true) }
-    var fulfilled by remember { mutableStateOf(false) }
-    var fulfilledDate by remember { mutableStateOf(LocalDate.now()) }
+    var photoPath by remember { mutableStateOf<String?>(null) }
+    var pendingPhotoPath by remember { mutableStateOf<String?>(null) }
+
+    var lines by remember { mutableStateOf(listOf<PatchLineState>()) }
+    var nextKey by remember { mutableStateOf(0L) }
+    fun newKey(): Long {
+        nextKey += 1
+        return nextKey
+    }
 
     var pendingNewPatchTypeName by remember { mutableStateOf<String?>(null) }
+    var pendingNewPatchTypeForLineKey by remember { mutableStateOf<Long?>(null) }
     var showAddPatchTypeDialog by remember { mutableStateOf(false) }
+    var addPatchTypeForLineKey by remember { mutableStateOf<Long?>(null) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+
+    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+        if (success) photoPath = pendingPhotoPath
+    }
 
     LaunchedEffect(patchAwardId) {
         if (!isNew) {
-            val award = viewModel.getPatchAward(patchAwardId)
-            existing = award
-            if (award != null) {
-                session = award.session
-                division = award.division
-                dateEarned = award.dateEarned
-                awardedAtTime = award.awardedAtTime
-                fulfilled = award.fulfilledDate != null
-                fulfilledDate = award.fulfilledDate ?: LocalDate.now()
+            val event = viewModel.getPatchAwardEvent(patchAwardId)
+            existing = event
+            if (event != null) {
+                session = event.session
+                division = event.division
+                dateEarned = event.dateEarned
+                photoPath = event.photoPath
             }
-            loaded = true
+            rawLines = viewModel.getPatchAwardLines(patchAwardId)
+        } else {
+            rawLines = emptyList()
         }
+        loaded = true
     }
 
     LaunchedEffect(players, existing) {
-        val award = existing
-        if (award != null && selectedPlayer == null) {
-            selectedPlayer = players.find { it.id == award.playerId }
+        val event = existing
+        if (event != null && selectedPlayer == null) {
+            selectedPlayer = players.find { it.id == event.playerId }
         } else if (isNew && selectedPlayer == null && players.size == 1) {
             selectedPlayer = players.first()
         }
     }
 
-    LaunchedEffect(patchTypes, existing, pendingNewPatchTypeName) {
-        val award = existing
-        if (award != null && selectedPatchType == null) {
-            selectedPatchType = patchTypes.find { it.id == award.patchTypeId }
+    LaunchedEffect(patchTypes, rawLines, pendingNewPatchTypeForLineKey) {
+        val raw = rawLines
+        if (raw != null && !linesInitialized && (raw.isEmpty() || patchTypes.isNotEmpty())) {
+            lines = if (raw.isEmpty()) {
+                listOf(PatchLineState(key = newKey(), lineId = 0, patchType = null, awardedAtTime = true, fulfilled = false, fulfilledDate = LocalDate.now()))
+            } else {
+                raw.map { line ->
+                    PatchLineState(
+                        key = newKey(),
+                        lineId = line.id,
+                        patchType = patchTypes.find { it.id == line.patchTypeId },
+                        awardedAtTime = line.awardedAtTime,
+                        fulfilled = line.fulfilledDate != null,
+                        fulfilledDate = line.fulfilledDate ?: LocalDate.now()
+                    )
+                }
+            }
+            linesInitialized = true
         }
-        pendingNewPatchTypeName?.let { name ->
-            patchTypes.find { it.name.equals(name, ignoreCase = true) }?.let {
-                selectedPatchType = it
+
+        val lineKey = pendingNewPatchTypeForLineKey
+        val name = pendingNewPatchTypeName
+        if (lineKey != null && name != null) {
+            patchTypes.find { it.name.equals(name, ignoreCase = true) }?.let { newType ->
+                lines = lines.map { if (it.key == lineKey) it.copy(patchType = newType) else it }
+                pendingNewPatchTypeForLineKey = null
                 pendingNewPatchTypeName = null
             }
         }
     }
 
-    val canSave = selectedPlayer != null && selectedPatchType != null && session.isNotBlank() && division.isNotBlank()
+    val canSave = selectedPlayer != null && session.isNotBlank() && division.isNotBlank() &&
+        lines.isNotEmpty() && lines.all { it.patchType != null }
 
     Scaffold(
         topBar = {
             BrandTopAppBar(
-                title = if (isNew) "Add Patch" else "Edit Patch",
+                title = if (isNew) "Add Patch Award" else "Edit Patch Award",
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -173,47 +235,93 @@ fun PatchEditScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            PatchTypeDropdown(
-                patchTypes = patchTypes,
-                selected = selectedPatchType,
-                onSelected = { selectedPatchType = it },
-                onAddNew = { showAddPatchTypeDialog = true }
-            )
-
             Column {
-                SectionLabel("Status")
-                Row(
+                SectionLabel("Patches")
+                Column(
                     modifier = Modifier.padding(top = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    FilterChip(
-                        selected = awardedAtTime,
-                        onClick = { awardedAtTime = true },
-                        label = { Text("Awarded at the time") }
-                    )
-                    FilterChip(
-                        selected = !awardedAtTime,
-                        onClick = { awardedAtTime = false },
-                        label = { Text("Still owed") }
-                    )
+                    lines.forEachIndexed { index, line ->
+                        PatchLineCard(
+                            index = index,
+                            line = line,
+                            patchTypes = patchTypes,
+                            canRemove = lines.size > 1,
+                            onPatchTypeSelected = { type ->
+                                lines = lines.map { if (it.key == line.key) it.copy(patchType = type) else it }
+                            },
+                            onAddNewPatchType = {
+                                addPatchTypeForLineKey = line.key
+                                showAddPatchTypeDialog = true
+                            },
+                            onAwardedAtTimeChanged = { awarded ->
+                                lines = lines.map { if (it.key == line.key) it.copy(awardedAtTime = awarded) else it }
+                            },
+                            onFulfilledChanged = { fulfilled ->
+                                lines = lines.map { if (it.key == line.key) it.copy(fulfilled = fulfilled) else it }
+                            },
+                            onFulfilledDateChanged = { date ->
+                                lines = lines.map { if (it.key == line.key) it.copy(fulfilledDate = date) else it }
+                            },
+                            onRemove = {
+                                lines = lines.filterNot { it.key == line.key }
+                            }
+                        )
+                    }
                 }
+                OutlinedButton(
+                    onClick = {
+                        lines = lines + PatchLineState(
+                            key = newKey(),
+                            lineId = 0,
+                            patchType = null,
+                            awardedAtTime = true,
+                            fulfilled = false,
+                            fulfilledDate = LocalDate.now()
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp)
+                ) { Text("+ Add Another Patch") }
             }
 
-            if (!awardedAtTime) {
-                Column {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Checkbox(checked = fulfilled, onCheckedChange = { fulfilled = it })
-                        Text("Since fulfilled (patch has now been given to the player)")
-                    }
-                    if (fulfilled) {
-                        DatePickerField(
-                            label = "Fulfilled Date",
-                            date = fulfilledDate,
-                            onDateSelected = { fulfilledDate = it },
-                            modifier = Modifier.fillMaxWidth()
+            Column {
+                SectionLabel("Photo")
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.padding(top = 8.dp)
+                ) {
+                    val currentPath = photoPath
+                    if (!currentPath.isNullOrBlank()) {
+                        AsyncImage(
+                            model = File(currentPath),
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(72.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
                         )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(72.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Filled.PhotoCamera, contentDescription = null)
+                        }
+                    }
+                    Column {
+                        TextButton(onClick = {
+                            val file = createPatchPhotoFile(context)
+                            pendingPhotoPath = file.absolutePath
+                            cameraLauncher.launch(patchPhotoUriFor(context, file))
+                        }) { Text(if (photoPath == null) "Take Photo" else "Retake Photo") }
+                        if (photoPath != null) {
+                            TextButton(onClick = { photoPath = null }) { Text("Remove Photo") }
+                        }
                     }
                 }
             }
@@ -221,17 +329,24 @@ fun PatchEditScreen(
             SaveButton(
                 enabled = canSave,
                 onClick = {
-                    val award = PatchAward(
+                    val event = PatchAwardEvent(
                         id = existing?.id ?: 0,
                         playerId = selectedPlayer!!.id,
-                        patchTypeId = selectedPatchType!!.id,
                         session = session.trim(),
                         division = division.trim(),
                         dateEarned = dateEarned,
-                        awardedAtTime = awardedAtTime,
-                        fulfilledDate = if (!awardedAtTime && fulfilled) fulfilledDate else null
+                        photoPath = photoPath
                     )
-                    if (isNew) viewModel.addPatchAward(award) else viewModel.updatePatchAward(award)
+                    val awardLines = lines.map { line ->
+                        PatchAwardLine(
+                            id = line.lineId,
+                            eventId = event.id,
+                            patchTypeId = line.patchType!!.id,
+                            awardedAtTime = line.awardedAtTime,
+                            fulfilledDate = if (!line.awardedAtTime && line.fulfilled) line.fulfilledDate else null
+                        )
+                    }
+                    if (isNew) viewModel.addPatchAwardEvent(event, awardLines) else viewModel.updatePatchAwardEvent(event, awardLines)
                     onDone()
                 }
             )
@@ -244,25 +359,100 @@ fun PatchEditScreen(
             onSave = { name, imagePath ->
                 if (name.isNotBlank()) {
                     pendingNewPatchTypeName = name
+                    pendingNewPatchTypeForLineKey = addPatchTypeForLineKey
                     viewModel.addPatchType(name, imagePath)
                 }
                 showAddPatchTypeDialog = false
+                addPatchTypeForLineKey = null
             },
-            onDismiss = { showAddPatchTypeDialog = false }
+            onDismiss = {
+                showAddPatchTypeDialog = false
+                addPatchTypeForLineKey = null
+            }
         )
     }
 
     if (showDeleteDialog) {
         ConfirmDialog(
-            title = "Delete patch record?",
-            text = "This cannot be undone.",
+            title = "Delete patch award?",
+            text = "This removes every patch in this award entry. This cannot be undone.",
             onConfirm = {
-                existing?.let { viewModel.deletePatchAward(it) }
+                existing?.let { viewModel.deletePatchAwardEvent(it) }
                 showDeleteDialog = false
                 onDone()
             },
             onDismiss = { showDeleteDialog = false }
         )
+    }
+}
+
+@Composable
+private fun PatchLineCard(
+    index: Int,
+    line: PatchLineState,
+    patchTypes: List<PatchType>,
+    canRemove: Boolean,
+    onPatchTypeSelected: (PatchType) -> Unit,
+    onAddNewPatchType: () -> Unit,
+    onAwardedAtTimeChanged: (Boolean) -> Unit,
+    onFulfilledChanged: (Boolean) -> Unit,
+    onFulfilledDateChanged: (LocalDate) -> Unit,
+    onRemove: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Patch ${index + 1}", fontWeight = FontWeight.Bold)
+            if (canRemove) {
+                IconButton(onClick = onRemove) {
+                    Icon(Icons.Filled.Delete, contentDescription = "Remove patch")
+                }
+            }
+        }
+
+        PatchTypeDropdown(
+            patchTypes = patchTypes,
+            selected = line.patchType,
+            onSelected = onPatchTypeSelected,
+            onAddNew = onAddNewPatchType
+        )
+
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(
+                selected = line.awardedAtTime,
+                onClick = { onAwardedAtTimeChanged(true) },
+                label = { Text("Awarded at the time") }
+            )
+            FilterChip(
+                selected = !line.awardedAtTime,
+                onClick = { onAwardedAtTimeChanged(false) },
+                label = { Text("Still owed") }
+            )
+        }
+
+        if (!line.awardedAtTime) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(checked = line.fulfilled, onCheckedChange = onFulfilledChanged)
+                Text("Since fulfilled")
+            }
+            if (line.fulfilled) {
+                DatePickerField(
+                    label = "Fulfilled Date",
+                    date = line.fulfilledDate,
+                    onDateSelected = onFulfilledDateChanged,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
     }
 }
 

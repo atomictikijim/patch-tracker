@@ -7,12 +7,12 @@ import androidx.room.PrimaryKey
 import java.time.LocalDate
 
 @Entity(
-    tableName = "patch_awards",
+    tableName = "patch_award_lines",
     foreignKeys = [
         ForeignKey(
-            entity = Player::class,
+            entity = PatchAwardEvent::class,
             parentColumns = ["id"],
-            childColumns = ["playerId"],
+            childColumns = ["eventId"],
             onDelete = ForeignKey.CASCADE
         ),
         ForeignKey(
@@ -22,19 +22,16 @@ import java.time.LocalDate
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index("playerId"), Index("patchTypeId")]
+    indices = [Index("eventId"), Index("patchTypeId")]
 )
-data class PatchAward(
+data class PatchAwardLine(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val playerId: Long,
+    val eventId: Long,
     val patchTypeId: Long,
-    val session: String,
-    val division: String,
-    val dateEarned: LocalDate,
-    // True if the patch was physically handed to the player when it was earned.
+    // True if this specific patch was physically handed to the player when it was earned.
     val awardedAtTime: Boolean,
     // Set once an initially-owed patch is later handed over. Null while still outstanding.
     val fulfilledDate: LocalDate? = null
 )
 
-val PatchAward.isOutstanding: Boolean get() = !awardedAtTime && fulfilledDate == null
+val PatchAwardLine.isOutstanding: Boolean get() = !awardedAtTime && fulfilledDate == null
