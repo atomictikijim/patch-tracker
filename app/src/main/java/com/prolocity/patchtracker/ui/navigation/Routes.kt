@@ -15,5 +15,10 @@ object Routes {
     const val TEAM_EDIT_PATTERN = "teams/edit/{id}"
     fun teamEdit(id: Long) = "teams/edit/$id"
 
+    const val SESSIONS = "sessions"
+    const val SESSION_DETAIL_PATTERN = "sessions/detail/{id}"
+    fun sessionDetail(id: Long) = "sessions/detail/$id"
+    const val SESSION_REVIEW = "sessions/review"
+
     const val NEW_ID = 0L
 }

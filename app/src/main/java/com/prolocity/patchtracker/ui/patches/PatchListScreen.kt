@@ -17,17 +17,22 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,6 +47,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.prolocity.patchtracker.data.PatchAwardEvent
 import com.prolocity.patchtracker.data.PatchAwardLineDetails
+import com.prolocity.patchtracker.data.Session
 import com.prolocity.patchtracker.ui.PatchTrackerViewModel
 import com.prolocity.patchtracker.ui.components.BrandTopAppBar
 import com.prolocity.patchtracker.ui.components.ConfirmDialog
@@ -59,7 +65,8 @@ private data class PatchEventGroup(
     val playerId: Long,
     val playerName: String,
     val playerNumber: String,
-    val session: String,
+    val sessionId: Long,
+    val sessionName: String,
     val division: String,
     val dateEarned: LocalDate,
     val photoPath: String?,
@@ -74,8 +81,16 @@ fun PatchListScreen(
     onEditClick: (Long) -> Unit
 ) {
     val patchAwards by viewModel.patchAwards.collectAsStateWithLifecycle()
+    val sessions by viewModel.sessions.collectAsStateWithLifecycle()
+    val currentSession by viewModel.currentSession.collectAsStateWithLifecycle()
     var filter by remember { mutableStateOf(StatusFilter.ALL) }
+    var sessionFilterId by remember { mutableStateOf<Long?>(null) }
+    var sessionFilterTouched by remember { mutableStateOf(false) }
     var pendingDelete by remember { mutableStateOf<PatchEventGroup?>(null) }
+
+    LaunchedEffect(currentSession) {
+        if (!sessionFilterTouched) sessionFilterId = currentSession?.id
+    }
 
     val groups = remember(patchAwards) {
         patchAwards.groupBy { it.eventId }.map { (eventId, lines) ->
@@ -85,7 +100,8 @@ fun PatchListScreen(
                 playerId = first.playerId,
                 playerName = first.playerName,
                 playerNumber = first.playerNumber,
-                session = first.session,
+                sessionId = first.sessionId,
+                sessionName = first.sessionName,
                 division = first.division,
                 dateEarned = first.dateEarned,
                 photoPath = first.photoPath,
@@ -94,8 +110,9 @@ fun PatchListScreen(
         }.sortedWith(compareByDescending<PatchEventGroup> { it.dateEarned }.thenBy { it.playerName })
     }
 
-    val filtered = remember(groups, filter) {
+    val filtered = remember(groups, filter, sessionFilterId) {
         groups.mapNotNull { group ->
+            if (sessionFilterId != null && group.sessionId != sessionFilterId) return@mapNotNull null
             val matching = when (filter) {
                 StatusFilter.ALL -> group.lines
                 StatusFilter.AWARDED -> group.lines.filter { !it.isOutstanding }
@@ -114,6 +131,16 @@ fun PatchListScreen(
         }
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+            SessionFilterDropdown(
+                sessions = sessions,
+                selectedId = sessionFilterId,
+                onSelected = { id ->
+                    sessionFilterTouched = true
+                    sessionFilterId = id
+                },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -159,7 +186,7 @@ fun PatchListScreen(
                     PatchAwardEvent(
                         id = group.eventId,
                         playerId = group.playerId,
-                        session = group.session,
+                        sessionId = group.sessionId,
                         division = group.division,
                         dateEarned = group.dateEarned,
                         photoPath = group.photoPath
@@ -196,7 +223,7 @@ private fun PatchEventRow(
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "Session: ${group.session}",
+                text = "Session: ${group.sessionName}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -241,6 +268,49 @@ private fun PatchEventRow(
                 contentDescription = "Delete",
                 tint = MaterialTheme.colorScheme.error
             )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SessionFilterDropdown(
+    sessions: List<Session>,
+    selectedId: Long?,
+    onSelected: (Long?) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val selectedName = sessions.find { it.id == selectedId }?.name ?: "All Sessions"
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }, modifier = modifier) {
+        OutlinedTextField(
+            value = selectedName,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Session") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier.fillMaxWidth().menuAnchor()
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            DropdownMenuItem(
+                text = { Text("All Sessions") },
+                onClick = {
+                    onSelected(null)
+                    expanded = false
+                }
+            )
+            sessions.forEach { session ->
+                DropdownMenuItem(
+                    text = { Text(session.name) },
+                    onClick = {
+                        onSelected(session.id)
+                        expanded = false
+                    }
+                )
+            }
         }
     }
 }

@@ -3,6 +3,7 @@ package com.prolocity.patchtracker.ui.navigation
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Star
@@ -31,6 +32,9 @@ import com.prolocity.patchtracker.ui.patches.PatchListScreen
 import com.prolocity.patchtracker.ui.patchtypes.PatchTypesScreen
 import com.prolocity.patchtracker.ui.players.PlayerEditScreen
 import com.prolocity.patchtracker.ui.players.PlayerListScreen
+import com.prolocity.patchtracker.ui.sessions.SessionDetailScreen
+import com.prolocity.patchtracker.ui.sessions.SessionListScreen
+import com.prolocity.patchtracker.ui.sessions.SessionReviewScreen
 import com.prolocity.patchtracker.ui.teams.TeamEditScreen
 import com.prolocity.patchtracker.ui.teams.TeamListScreen
 
@@ -40,7 +44,8 @@ private val topLevelTabs = listOf(
     TopLevelTab(Routes.PATCHES, "Patches", Icons.Filled.Star),
     TopLevelTab(Routes.PLAYERS, "Players", Icons.Filled.Person),
     TopLevelTab(Routes.TEAMS, "Teams", Icons.Filled.Groups),
-    TopLevelTab(Routes.PATCH_TYPES, "Patch Types", Icons.AutoMirrored.Filled.List)
+    TopLevelTab(Routes.PATCH_TYPES, "Patch Types", Icons.AutoMirrored.Filled.List),
+    TopLevelTab(Routes.SESSIONS, "Sessions", Icons.Filled.Event)
 )
 
 @Composable
@@ -140,6 +145,30 @@ fun PatchTrackerNavHost(viewModel: PatchTrackerViewModel) {
                     teamId = id,
                     onDone = { navController.popBackStack() },
                     onBack = { navController.popBackStack() }
+                )
+            }
+            composable(Routes.SESSIONS) {
+                SessionListScreen(
+                    viewModel = viewModel,
+                    onSessionClick = { id -> navController.navigate(Routes.sessionDetail(id)) },
+                    onReviewOpened = { navController.navigate(Routes.SESSION_REVIEW) }
+                )
+            }
+            composable(
+                Routes.SESSION_DETAIL_PATTERN,
+                arguments = listOf(navArgument("id") { type = NavType.LongType })
+            ) { entry ->
+                val id = entry.arguments?.getLong("id") ?: Routes.NEW_ID
+                SessionDetailScreen(
+                    viewModel = viewModel,
+                    sessionId = id,
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable(Routes.SESSION_REVIEW) {
+                SessionReviewScreen(
+                    viewModel = viewModel,
+                    onClose = { navController.popBackStack() }
                 )
             }
         }

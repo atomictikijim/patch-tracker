@@ -14,14 +14,20 @@ import java.time.LocalDate
             parentColumns = ["id"],
             childColumns = ["playerId"],
             onDelete = ForeignKey.CASCADE
+        ),
+        ForeignKey(
+            entity = Session::class,
+            parentColumns = ["id"],
+            childColumns = ["sessionId"],
+            onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index("playerId")]
+    indices = [Index("playerId"), Index("sessionId")]
 )
 data class PatchAwardEvent(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val playerId: Long,
-    val session: String,
+    val sessionId: Long,
     val division: String,
     val dateEarned: LocalDate,
     // Photo of the player with the patches awarded in this entry, if one was taken.

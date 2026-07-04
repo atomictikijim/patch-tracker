@@ -53,6 +53,7 @@ import com.prolocity.patchtracker.data.PatchAwardEvent
 import com.prolocity.patchtracker.data.PatchAwardLine
 import com.prolocity.patchtracker.data.PatchType
 import com.prolocity.patchtracker.data.Player
+import com.prolocity.patchtracker.data.Session
 import com.prolocity.patchtracker.ui.PatchTrackerViewModel
 import com.prolocity.patchtracker.ui.components.BrandTopAppBar
 import com.prolocity.patchtracker.ui.components.ConfirmDialog
@@ -88,6 +89,8 @@ fun PatchEditScreen(
     val context = LocalContext.current
     val players by viewModel.players.collectAsStateWithLifecycle()
     val patchTypes by viewModel.patchTypes.collectAsStateWithLifecycle()
+    val sessions by viewModel.sessions.collectAsStateWithLifecycle()
+    val currentSession by viewModel.currentSession.collectAsStateWithLifecycle()
 
     var loaded by remember { mutableStateOf(false) }
     var existing by remember { mutableStateOf<PatchAwardEvent?>(null) }
@@ -95,7 +98,7 @@ fun PatchEditScreen(
     var linesInitialized by remember { mutableStateOf(false) }
 
     var selectedPlayer by remember { mutableStateOf<Player?>(null) }
-    var session by remember { mutableStateOf("") }
+    var selectedSession by remember { mutableStateOf<Session?>(null) }
     var division by remember { mutableStateOf("") }
     var dateEarned by remember { mutableStateOf(LocalDate.now()) }
     var photoPath by remember { mutableStateOf<String?>(null) }
@@ -123,7 +126,6 @@ fun PatchEditScreen(
             val event = viewModel.getPatchAwardEvent(patchAwardId)
             existing = event
             if (event != null) {
-                session = event.session
                 division = event.division
                 dateEarned = event.dateEarned
                 photoPath = event.photoPath
@@ -141,6 +143,15 @@ fun PatchEditScreen(
             selectedPlayer = players.find { it.id == event.playerId }
         } else if (isNew && selectedPlayer == null && players.size == 1) {
             selectedPlayer = players.first()
+        }
+    }
+
+    LaunchedEffect(sessions, existing, currentSession) {
+        val event = existing
+        if (event != null && selectedSession == null) {
+            selectedSession = sessions.find { it.id == event.sessionId }
+        } else if (isNew && selectedSession == null) {
+            selectedSession = currentSession
         }
     }
 
@@ -175,7 +186,7 @@ fun PatchEditScreen(
         }
     }
 
-    val canSave = selectedPlayer != null && session.isNotBlank() && division.isNotBlank() &&
+    val canSave = selectedPlayer != null && selectedSession != null && division.isNotBlank() &&
         lines.isNotEmpty() && lines.all { it.patchType != null }
 
     Scaffold(
@@ -213,11 +224,10 @@ fun PatchEditScreen(
                 onSelected = { selectedPlayer = it }
             )
 
-            OutlinedTextField(
-                value = session,
-                onValueChange = { session = it },
-                label = { Text("Session (e.g. 2026 Summer)") },
-                modifier = Modifier.fillMaxWidth()
+            SessionDropdown(
+                sessions = sessions,
+                selected = selectedSession,
+                onSelected = { selectedSession = it }
             )
 
             OutlinedTextField(
@@ -332,7 +342,7 @@ fun PatchEditScreen(
                     val event = PatchAwardEvent(
                         id = existing?.id ?: 0,
                         playerId = selectedPlayer!!.id,
-                        session = session.trim(),
+                        sessionId = selectedSession!!.id,
                         division = division.trim(),
                         dateEarned = dateEarned,
                         photoPath = photoPath
@@ -483,6 +493,41 @@ private fun PlayerDropdown(
                     text = { Text("${player.name} (#${player.playerNumber})") },
                     onClick = {
                         onSelected(player)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SessionDropdown(
+    sessions: List<Session>,
+    selected: Session?,
+    onSelected: (Session) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+        OutlinedTextField(
+            value = selected?.name ?: "",
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Session") },
+            placeholder = { Text(if (sessions.isEmpty()) "Add a session first" else "Select a session") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier.fillMaxWidth().menuAnchor()
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            sessions.forEach { session ->
+                DropdownMenuItem(
+                    text = { Text(session.name) },
+                    onClick = {
+                        onSelected(session)
                         expanded = false
                     }
                 )

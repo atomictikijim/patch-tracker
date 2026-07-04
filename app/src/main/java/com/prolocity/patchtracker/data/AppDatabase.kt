@@ -11,8 +11,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Database(
-    entities = [Player::class, PatchType::class, PatchAwardEvent::class, PatchAwardLine::class, Team::class, TeamMember::class],
-    version = 9,
+    entities = [Player::class, PatchType::class, PatchAwardEvent::class, PatchAwardLine::class, Team::class, TeamMember::class, Session::class],
+    version = 10,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -21,6 +21,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun patchTypeDao(): PatchTypeDao
     abstract fun patchAwardDao(): PatchAwardDao
     abstract fun teamDao(): TeamDao
+    abstract fun sessionDao(): SessionDao
 
     companion object {
         @Volatile
@@ -48,7 +49,9 @@ abstract class AppDatabase : RoomDatabase() {
                             }
                         }
                     })
-                    // Pre-release schema: no real user data to preserve across patch-catalog updates.
+                    .addMigrations(MIGRATION_9_10)
+                    // Pre-release schema: no real user data to preserve across patch-catalog updates
+                    // on any other version gap; MIGRATION_9_10 above preserves real award history.
                     .fallbackToDestructiveMigration()
                     .build()
                     .also { INSTANCE = it }

@@ -7,12 +7,15 @@ class PatchRepository(
     private val playerDao: PlayerDao,
     private val patchTypeDao: PatchTypeDao,
     private val patchAwardDao: PatchAwardDao,
-    private val teamDao: TeamDao
+    private val teamDao: TeamDao,
+    private val sessionDao: SessionDao
 ) {
     val players: Flow<List<Player>> = playerDao.getAll()
     val patchTypes: Flow<List<PatchType>> = patchTypeDao.getAll()
     val patchAwards: Flow<List<PatchAwardLineDetails>> = patchAwardDao.getAllLineDetails()
     val teams: Flow<List<TeamWithMembers>> = teamDao.getAllWithMembers()
+    val sessions: Flow<List<Session>> = sessionDao.getAll()
+    val currentSession: Flow<Session?> = sessionDao.getCurrent()
 
     suspend fun getPlayer(id: Long): Player? = playerDao.getById(id)
 
@@ -71,4 +74,23 @@ class PatchRepository(
     }
 
     suspend fun deleteTeam(team: Team) = teamDao.delete(team)
+
+    suspend fun getSession(id: Long): Session? = sessionDao.getById(id)
+
+    suspend fun startNewSession(name: String): Long {
+        val id = sessionDao.insert(Session(name = name.trim(), createdDate = LocalDate.now()))
+        sessionDao.setCurrent(id)
+        return id
+    }
+
+    suspend fun renameSession(session: Session, name: String) = sessionDao.update(session.copy(name = name.trim()))
+
+    suspend fun setCurrentSession(id: Long) = sessionDao.setCurrent(id)
+
+    suspend fun deleteSession(session: Session) = sessionDao.delete(session)
+
+    suspend fun clearSessionAwards(sessionId: Long) = patchAwardDao.deleteEventsForSession(sessionId)
+
+    suspend fun getSessionAwardLines(sessionId: Long): List<PatchAwardLineDetails> =
+        patchAwardDao.getLineDetailsForSession(sessionId)
 }

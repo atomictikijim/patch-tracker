@@ -17,7 +17,8 @@ interface PatchAwardDao {
                e.playerId AS playerId,
                p.name AS playerName,
                p.playerNumber AS playerNumber,
-               e.session AS session,
+               s.id AS sessionId,
+               s.name AS sessionName,
                e.division AS division,
                e.dateEarned AS dateEarned,
                e.photoPath AS photoPath,
@@ -31,11 +32,45 @@ interface PatchAwardDao {
         FROM patch_award_lines l
         INNER JOIN patch_award_events e ON e.id = l.eventId
         INNER JOIN players p ON p.id = e.playerId
+        INNER JOIN sessions s ON s.id = e.sessionId
         INNER JOIN patch_types pt ON pt.id = l.patchTypeId
         ORDER BY e.dateEarned DESC, p.name ASC, l.id ASC
         """
     )
     fun getAllLineDetails(): Flow<List<PatchAwardLineDetails>>
+
+    @Query(
+        """
+        SELECT l.id AS lineId,
+               e.id AS eventId,
+               e.playerId AS playerId,
+               p.name AS playerName,
+               p.playerNumber AS playerNumber,
+               s.id AS sessionId,
+               s.name AS sessionName,
+               e.division AS division,
+               e.dateEarned AS dateEarned,
+               e.photoPath AS photoPath,
+               l.patchTypeId AS patchTypeId,
+               pt.name AS patchName,
+               pt.iconKey AS patchIconKey,
+               pt.badgeText AS patchBadgeText,
+               pt.imagePath AS patchImagePath,
+               l.awardedAtTime AS awardedAtTime,
+               l.fulfilledDate AS fulfilledDate
+        FROM patch_award_lines l
+        INNER JOIN patch_award_events e ON e.id = l.eventId
+        INNER JOIN players p ON p.id = e.playerId
+        INNER JOIN sessions s ON s.id = e.sessionId
+        INNER JOIN patch_types pt ON pt.id = l.patchTypeId
+        WHERE e.sessionId = :sessionId
+        ORDER BY e.dateEarned DESC, p.name ASC, l.id ASC
+        """
+    )
+    suspend fun getLineDetailsForSession(sessionId: Long): List<PatchAwardLineDetails>
+
+    @Query("DELETE FROM patch_award_events WHERE sessionId = :sessionId")
+    suspend fun deleteEventsForSession(sessionId: Long)
 
     @Query("SELECT * FROM patch_award_events WHERE id = :id")
     suspend fun getEventById(id: Long): PatchAwardEvent?
