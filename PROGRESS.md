@@ -8,9 +8,28 @@ Functional MVP, verified end-to-end on a physical device. Tracks a player roster
 
 ## Next action
 
-None pending. Pick from "Suggested next steps" below by priority, or continue with new feature requests as they come in.
+**iOS port — verify the scaffold on a Mac before continuing.** Phases 0–2 are written and pushed but **have never been compiled** (no Xcode in the Windows authoring environment). On a Mac:
+
+1. `cd ios && brew install xcodegen && xcodegen generate && open PatchTracker.xcodeproj`
+2. Build (⌘B) against an iOS 17+ simulator and fix any compile errors. Most-likely spots: SwiftData `@Model` types used as `NavigationLink` values / `Set` members, the `.onChange(of:)` two-param closure signature, `ContentUnavailableView`'s optional `description`, and `PersistentIdentifier` usage in the faceted-filter options.
+3. Run it: the **Patch Types** tab should show the 33 seeded patches with icons; the other four tabs render their list UIs (empty until data is added). Add a session, player, etc. to sanity-check writes.
+
+Once it builds and runs clean, resume the port at **Phase 3 (editing flows)** — the add/edit and detail screens are currently `ContentUnavailableView` stubs. See `IOS_PORT_PLAN.md` for the phase breakdown.
+
+The Android app itself has **no pending action** — pick from "Suggested next steps" below or take new feature requests.
 
 ## Suggested next steps
+
+### iOS port (`ios/`, see `IOS_PORT_PLAN.md`)
+
+- **Build & verify on a Mac** (see Next action above) — do this before writing more Swift, so Phase 3 isn't stacked on an unverified base.
+- **Phase 3 — editing flows:** flesh out the six stub screens — `PatchEditView` (multi-line award, player type-ahead, division dropdown from the player's teams incl. "No division", awarded/owed per line, photo), `PlayerDetailView`/`PlayerEditView` (view-then-edit, 5-digit unique-number validation, earned-patch + team lists), `TeamDetailView`/`TeamEditView` (8-slot roster, one-team-per-division enforcement, captain = slot 0), and wire "Edit" from the detail views.
+- **Phase 4 — platform integrations:** camera capture → `PhotoStorage` (relative filename), CSV import for players + teams (port the validation rules and result summary), and the share sheet + clipboard summary + selection mode on the Patches list (deferred from Phase 2).
+- **Phase 5 — sessions & backup:** session lifecycle in `SessionDetailView` (rename / set current / clear awards / finalize), `.zip` export + import via ZIPFoundation, read-only review screen.
+- **Phase 6 — help, polish, QA:** bundle & render `FEATURES.md`, iPad `NavigationSplitView` adaptivity pass, light/dark, VoiceOver/Dynamic Type, device testing on both idioms.
+- **Decide app-icon art** — `AppIcon.appiconset` has an empty 1024 slot (build warning until filled); reuse/adapt the Android pool-ball icon.
+
+### Android app
 
 - **Keep `FEATURES.md` current** — the end-user feature guide now lives in-repo at `FEATURES.md` (created 2026-07-05, current through v0.1.4). Per the CLAUDE.md convention, update it as part of every functional change. (The old external `C:\Users\james\Downloads\Patch Tracker - Feature Documentation.docx` is superseded by this in-repo file.)
 - **Tests** — `ExampleInstrumentedTest.kt` / `ExampleUnitTest.kt` are untouched template stubs. `CsvImportTest.kt` now covers the CSV parser, but nothing yet exercises the DAOs, the Awarded/Owed/fulfillment logic, or the patch-icon spec mapping.
