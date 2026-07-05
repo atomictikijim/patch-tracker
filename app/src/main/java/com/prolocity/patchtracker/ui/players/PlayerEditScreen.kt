@@ -30,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.prolocity.patchtracker.data.PLAYER_NUMBER_LENGTH
 import com.prolocity.patchtracker.data.Player
 import com.prolocity.patchtracker.ui.PatchTrackerViewModel
 import com.prolocity.patchtracker.ui.components.BrandTopAppBar
@@ -73,13 +74,15 @@ fun PlayerEditScreen(
         }
     }
 
-    // Player number is a unique identifier — block saving one another player already holds
-    // (excluding this player when editing). Trimmed to match how it's persisted.
+    // Player number is a required, exactly-5-digit unique identifier. Block saving one another
+    // player already holds (excluding this player when editing); trimmed to match how it's persisted.
     val duplicateNumber = playerNumber.isNotBlank() && players.any {
         it.id != playerId && it.playerNumber.trim().equals(playerNumber.trim(), ignoreCase = true)
     }
+    val numberValidLength = playerNumber.length == PLAYER_NUMBER_LENGTH
+    val numberError = duplicateNumber || (playerNumber.isNotEmpty() && !numberValidLength)
 
-    val canSave = name.isNotBlank() && playerNumber.isNotBlank() && !duplicateNumber
+    val canSave = name.isNotBlank() && numberValidLength && !duplicateNumber
 
     val earnedPatches = remember(patchAwards, playerId) {
         patchAwards
@@ -132,12 +135,16 @@ fun PlayerEditScreen(
                 )
                 OutlinedTextField(
                     value = playerNumber,
-                    onValueChange = { playerNumber = it },
+                    onValueChange = { playerNumber = it.filter(Char::isDigit).take(PLAYER_NUMBER_LENGTH) },
                     label = { Text("Player Number") },
-                    isError = duplicateNumber,
-                    supportingText = if (duplicateNumber) {
-                        { Text("Another player already has this number") }
-                    } else null,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    isError = numberError,
+                    supportingText = {
+                        Text(
+                            if (duplicateNumber) "Another player already has this number"
+                            else "Must be exactly $PLAYER_NUMBER_LENGTH digits"
+                        )
+                    },
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
