@@ -88,8 +88,9 @@ Two files at the repo root track project history and stay current across session
 
 - **`NOTES.md`** — an append-only log of decisions, deviations, and notable bugs (with root cause + fix), each dated. Add an entry for anything a future session would otherwise have to rediscover: a rejected alternative and why, a platform/library quirk that cost time, a deliberate scope cut. Don't log routine changes here — this is for things that aren't obvious from reading the code.
 - **`PROGRESS.md`** — current state, next action, a running "suggested next steps" list, and a terse dated log of what got done per session. Update the "Current state"/"Next action" section whenever they change, and append a one-paragraph log entry for the session at the end of it.
+- **`FEATURES.md`** — the end-user/league-rep-facing feature guide (what each tab and feature does, written in plain language, not architecture). **Update it as part of every functional change to the app** — if a change adds, removes, or alters user-visible behavior, bring the relevant section of `FEATURES.md` current in the same turn (and bump its "Version"/"last updated" header line). Don't touch it for pure refactors, internal-only changes, or exploration turns that don't change behavior.
 
-Both are Markdown, not code — editing them doesn't need the build/test loop below, but treat them as part of "finishing the work," not optional cleanup.
+All three are Markdown, not code — editing them doesn't need the build/test loop below, but treat them as part of "finishing the work," not optional cleanup.
 
 ## Working conventions
 
