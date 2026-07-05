@@ -17,6 +17,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.Checkbox
@@ -28,6 +29,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -68,6 +70,9 @@ import com.prolocity.patchtracker.ui.components.patchPhotoUriFor
 import com.prolocity.patchtracker.ui.navigation.Routes
 import java.io.File
 import java.time.LocalDate
+
+// Minimum characters before the player lookup starts showing suggestions.
+private const val PLAYER_SEARCH_MIN_CHARS = 2
 
 private data class PatchLineState(
     val key: Long,
@@ -235,10 +240,10 @@ fun PatchEditScreen(
                 )
             }
 
-            PlayerDropdown(
+            PlayerLookup(
                 players = players,
                 selected = selectedPlayer,
-                onSelected = { selectedPlayer = it }
+                onSelectedChange = { selectedPlayer = it }
             )
 
             SessionDropdown(
@@ -486,33 +491,81 @@ private fun PatchLineCard(
     }
 }
 
+// Type-to-search player lookup: the user types a name (or number) and, once at least
+// PLAYER_SEARCH_MIN_CHARS characters are entered, matching players appear as suggestions.
+// Picking one sets the selection; editing the text again clears it until another is picked,
+// so `selected` is only ever a player the user explicitly chose.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PlayerDropdown(
+private fun PlayerLookup(
     players: List<Player>,
     selected: Player?,
-    onSelected: (Player) -> Unit
+    onSelectedChange: (Player?) -> Unit
 ) {
+    fun label(p: Player) = "${p.name} (#${p.playerNumber})"
+    var query by remember { mutableStateOf(selected?.let(::label).orEmpty()) }
     var expanded by remember { mutableStateOf(false) }
-    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+
+    // Reflect an externally-set player (loading an existing award, or single-player
+    // auto-select) in the field text.
+    LaunchedEffect(selected) {
+        selected?.let { if (query != label(it)) query = label(it) }
+    }
+
+    val matches = remember(query, players, selected) {
+        val q = query.trim()
+        when {
+            q.length < PLAYER_SEARCH_MIN_CHARS -> emptyList()
+            // Already showing the chosen player's full label -> nothing to suggest.
+            selected != null && q == label(selected) -> emptyList()
+            else -> players.filter {
+                it.name.contains(q, ignoreCase = true) || it.playerNumber.contains(q, ignoreCase = true)
+            }
+        }
+    }
+    val menuOpen = expanded && matches.isNotEmpty()
+
+    ExposedDropdownMenuBox(expanded = menuOpen, onExpandedChange = { expanded = it }) {
         OutlinedTextField(
-            value = selected?.let { "${it.name} (#${it.playerNumber})" } ?: "",
-            onValueChange = {},
-            readOnly = true,
+            value = query,
+            onValueChange = { new ->
+                query = new
+                // Typing invalidates a prior pick until the user chooses again.
+                if (selected != null && new != label(selected)) onSelectedChange(null)
+                expanded = true
+            },
             label = { Text("Player") },
-            placeholder = { Text(if (players.isEmpty()) "Add a player first" else "Select a player") },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier.fillMaxWidth().menuAnchor()
+            placeholder = {
+                Text(if (players.isEmpty()) "Add a player first" else "Type a name to search")
+            },
+            singleLine = true,
+            trailingIcon = {
+                if (query.isNotEmpty()) {
+                    IconButton(onClick = {
+                        query = ""
+                        onSelectedChange(null)
+                        expanded = false
+                    }) {
+                        Icon(Icons.Filled.Close, contentDescription = "Clear player")
+                    }
+                }
+            },
+            supportingText = {
+                if (query.trim().length in 1 until PLAYER_SEARCH_MIN_CHARS) {
+                    Text("Type at least $PLAYER_SEARCH_MIN_CHARS characters to search")
+                } else if (menuOpen.not() && selected == null && query.trim().length >= PLAYER_SEARCH_MIN_CHARS) {
+                    Text("No players match")
+                }
+            },
+            modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryEditable)
         )
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
-            players.forEach { player ->
+        ExposedDropdownMenu(expanded = menuOpen, onDismissRequest = { expanded = false }) {
+            matches.forEach { player ->
                 DropdownMenuItem(
-                    text = { Text("${player.name} (#${player.playerNumber})") },
+                    text = { Text(label(player)) },
                     onClick = {
-                        onSelected(player)
+                        onSelectedChange(player)
+                        query = label(player)
                         expanded = false
                     }
                 )
