@@ -12,6 +12,10 @@ interface PlayerDao {
     @Query("SELECT * FROM players ORDER BY name ASC")
     fun getAll(): Flow<List<Player>>
 
+    // One-shot snapshot for bulk operations (e.g. CSV import dedup/lookup), not observed.
+    @Query("SELECT * FROM players")
+    suspend fun getAllList(): List<Player>
+
     @Query("SELECT * FROM players WHERE id = :id")
     suspend fun getById(id: Long): Player?
 

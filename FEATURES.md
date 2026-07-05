@@ -1,6 +1,6 @@
 # Patch Tracker — Feature Guide
 
-*Version 0.1.5 · last updated 2026-07-05*
+Version 0.1.6 · last updated 2026-07-05
 
 Patch Tracker is an Android app for a local APA (American Poolplayers Association)
 pool league. It keeps track of which patches each player has earned, whether the
@@ -125,6 +125,20 @@ summary also lists:
 
 A brand-new player opens straight into the edit form.
 
+### Import players from a CSV
+
+The **upload icon** in the top bar lets you bulk-add players from a CSV file
+(handy for onboarding a whole roster at once). Pick the file and the app imports
+every valid row, then shows a summary of how many were added and which rows were
+skipped and why.
+
+- Required columns: **name** and **playerNumber** (a 5-digit, unique number).
+  Optional: **phoneNumber**, **email**. Column order and minor header spelling
+  don't matter.
+- Rows are skipped (not the whole file) when the name is missing, the number
+  isn't exactly 5 digits, or the number is already used (in the app or earlier in
+  the same file).
+
 ---
 
 ## Teams
@@ -142,6 +156,21 @@ drawn from the roster. Player slot 1 is the **team captain**.
   another slot on this team, or already rostered on another team **in the same
   division**, won't appear as a choice — the app enforces one team per division
   per player.
+
+### Import teams from a CSV
+
+The **upload icon** in the top bar bulk-adds teams from a CSV file, with a
+summary of what was added, skipped, and any warnings. **Import your players
+first** — teams reference players by number, so the players must already exist.
+
+- Columns: **name**, **division** (3 digits), and **player1**…**player8** holding
+  the 5-digit **player numbers** of team members (player1 is the captain).
+- A team is skipped if its name is missing, its division isn't 3 digits, or a team
+  with the same name already exists in that division (so re-importing the same
+  file won't create duplicates).
+- Individual players are dropped with a warning (the team is still created) when a
+  number isn't found in the app, or the player is already on another team in that
+  division. Teams are capped at 8 players.
 
 ---
 

@@ -7,6 +7,7 @@ import com.prolocity.patchtracker.data.PatchAwardEvent
 import com.prolocity.patchtracker.data.PatchAwardLine
 import com.prolocity.patchtracker.data.PatchAwardLineDetails
 import com.prolocity.patchtracker.data.PatchRepository
+import com.prolocity.patchtracker.data.ImportSummary
 import com.prolocity.patchtracker.data.PatchType
 import com.prolocity.patchtracker.data.Player
 import com.prolocity.patchtracker.data.Session
@@ -71,6 +72,14 @@ class PatchTrackerViewModel(private val repository: PatchRepository) : ViewModel
     }
 
     suspend fun getPlayer(id: Long): Player? = repository.getPlayer(id)
+
+    fun importPlayersCsv(text: String, onResult: (ImportSummary) -> Unit) = viewModelScope.launch {
+        onResult(repository.importPlayersCsv(text))
+    }
+
+    fun importTeamsCsv(text: String, onResult: (ImportSummary) -> Unit) = viewModelScope.launch {
+        onResult(repository.importTeamsCsv(text))
+    }
 
     fun addPatchType(name: String, imagePath: String? = null, onAdded: (Long) -> Unit = {}) = viewModelScope.launch {
         val id = repository.addPatchType(name, imagePath)

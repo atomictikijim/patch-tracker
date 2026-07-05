@@ -1,5 +1,7 @@
 package com.prolocity.patchtracker.ui.teams
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,6 +15,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -20,6 +23,7 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -28,16 +32,22 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.prolocity.patchtracker.data.ImportSummary
 import com.prolocity.patchtracker.data.MAX_TEAM_PLAYERS
 import com.prolocity.patchtracker.ui.PatchTrackerViewModel
 import com.prolocity.patchtracker.ui.components.BrandTopAppBar
+import com.prolocity.patchtracker.ui.components.CsvImportResultDialog
+import com.prolocity.patchtracker.ui.components.CSV_MIME_TYPES
 import com.prolocity.patchtracker.ui.components.InitialsAvatar
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,6 +58,17 @@ fun TeamListScreen(
 ) {
     val teams by viewModel.teams.collectAsStateWithLifecycle()
     var divisionFilter by remember { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    var importResult by remember { mutableStateOf<ImportSummary?>(null) }
+
+    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        coroutineScope.launch {
+            val text = context.contentResolver.openInputStream(uri)?.use { it.bufferedReader().readText() }
+            if (text != null) viewModel.importTeamsCsv(text) { importResult = it }
+        }
+    }
 
     // Divisions still present in the current team set, plus the current selection unioned back in
     // so it stays visible/clearable even if it now matches nothing.
@@ -59,7 +80,16 @@ fun TeamListScreen(
     val visibleTeams = teams.filter { divisionFilter == null || it.team.division == divisionFilter }
 
     Scaffold(
-        topBar = { BrandTopAppBar(title = "Teams") },
+        topBar = {
+            BrandTopAppBar(
+                title = "Teams",
+                actions = {
+                    IconButton(onClick = { importLauncher.launch(CSV_MIME_TYPES) }) {
+                        Icon(Icons.Filled.UploadFile, contentDescription = "Import teams from CSV")
+                    }
+                }
+            )
+        },
         floatingActionButton = {
             FloatingActionButton(onClick = onAddClick) {
                 Icon(Icons.Filled.Add, contentDescription = "Add team")
@@ -112,6 +142,15 @@ fun TeamListScreen(
                 }
             }
         }
+    }
+
+    importResult?.let { summary ->
+        CsvImportResultDialog(
+            title = "Team Import",
+            noun = "team",
+            summary = summary,
+            onDismiss = { importResult = null }
+        )
     }
 }
 

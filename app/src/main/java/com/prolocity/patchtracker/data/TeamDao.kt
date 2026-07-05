@@ -17,6 +17,14 @@ interface TeamDao {
     @Query("SELECT * FROM teams WHERE id = :id")
     suspend fun getById(id: Long): Team?
 
+    // One-shot snapshots for bulk operations (e.g. CSV import: existing-team dedup and building
+    // per-division roster occupancy for the "one team per division per player" rule), not observed.
+    @Query("SELECT * FROM teams")
+    suspend fun getAllList(): List<Team>
+
+    @Query("SELECT * FROM team_members")
+    suspend fun getAllMembers(): List<TeamMember>
+
     @Query("SELECT playerId FROM team_members WHERE teamId = :teamId ORDER BY position ASC")
     suspend fun getMemberIdsOrdered(teamId: Long): List<Long>
 
