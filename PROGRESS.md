@@ -19,6 +19,10 @@ None pending. Pick from "Suggested next steps" below by priority, or continue wi
 
 ## Log
 
+### 2026-07-05
+
+- Captured the dataset built up on the testing device and committed it under `testdata/` so it can be reloaded on demand instead of re-entered by hand: `test_data.sql` (a data-only SQLite dump — 95 players, 35 teams/219 memberships, 32 patch types, 1 session, 24 award events/27 lines), `load_test_data.sh` (reload onto a connected device), `dump_test_data.sh` (regenerate the SQL from the device), and a `README.md`. Reload pulls the app's current db and applies the data into it (reusing the installed schema so it survives Room version bumps), restores `sqlite_sequence` so later in-app inserts don't collide, and pushes back via a binary-safe `adb push` + `run-as cp` hop. Verified end-to-end on the device (correct row counts, clean FK check, app renders the reloaded session/awards). See NOTES.md 2026-07-05 for the Git-Bash/adb gotchas encoded in the scripts. No app code changes.
+
 ### 2026-07-04
 
 - Built the initial app end-to-end: Room + Compose + Navigation, Players/Patches/Patch Types screens, Awarded/Owed status with fulfillment tracking. Restyled to an APA Scorekeeper-inspired look (league-blue theme, flat list rows, date-chip badges). Committed and tagged `v0.1`.
