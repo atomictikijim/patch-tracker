@@ -53,6 +53,7 @@ fun TeamEditScreen(
 ) {
     val isNew = teamId == Routes.NEW_ID
     val players by viewModel.players.collectAsStateWithLifecycle()
+    val teams by viewModel.teams.collectAsStateWithLifecycle()
 
     var loaded by remember { mutableStateOf(isNew) }
     var isEditing by remember { mutableStateOf(isNew) }
@@ -127,10 +128,22 @@ fun TeamEditScreen(
 
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     SectionLabel("Players")
+                    // A player may only be on one team per division: exclude anyone already rostered
+                    // on another team in this team's division. Keyed on the current `division` value,
+                    // so changing it re-evaluates availability.
+                    val takenInDivision = teams
+                        .filter { it.team.id != teamId && it.team.division == division }
+                        .flatMap { it.members }
+                        .mapTo(HashSet()) { it.id }
                     for (slot in 0 until MAX_TEAM_PLAYERS) {
                         val chosenElsewhere = slotPlayerIds.filterIndexed { i, _ -> i != slot }.filterNotNull().toSet()
-                        val availablePlayers = players.filter { it.id !in chosenElsewhere }
-                        val selectedPlayer = players.find { it.id == slotPlayerIds.getOrNull(slot) }
+                        val slotSelectedId = slotPlayerIds.getOrNull(slot)
+                        val availablePlayers = players.filter {
+                            // Keep this slot's own current pick visible even if it happens to be
+                            // taken elsewhere (e.g. legacy data), so a selection never silently vanishes.
+                            it.id !in chosenElsewhere && (it.id !in takenInDivision || it.id == slotSelectedId)
+                        }
+                        val selectedPlayer = players.find { it.id == slotSelectedId }
                         PlayerSlotDropdown(
                             label = if (slot == 0) "Player 1 (Captain)" else "Player ${slot + 1}",
                             players = availablePlayers,
