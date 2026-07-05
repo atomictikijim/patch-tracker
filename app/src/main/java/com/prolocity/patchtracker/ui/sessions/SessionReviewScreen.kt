@@ -88,8 +88,9 @@ fun SessionReviewScreen(
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
+                                val divisionText = if (award.division.isBlank()) "No division" else "Div ${award.division}"
                                 Text(
-                                    text = "${award.playerName} · #${award.playerNumber} · Div ${award.division} · ${award.dateEarned.formatted()}",
+                                    text = "${award.playerName} · #${award.playerNumber} · $divisionText · ${award.dateEarned.formatted()}",
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold
                                 )

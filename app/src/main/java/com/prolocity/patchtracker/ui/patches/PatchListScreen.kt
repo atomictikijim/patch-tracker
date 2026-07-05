@@ -164,7 +164,7 @@ fun PatchListScreen(
         .filter { matchesSession(it) && matchesPlayer(it) && matchesDate(it) && matchesStatus(it) }
         .map { it.division }
         .let { (it + listOfNotNull(divisionFilter)).distinct().sorted() }
-        .map { it to it }
+        .map { it to if (it.isBlank()) "No division" else it }
     val playerOptions = groups
         .filter { matchesSession(it) && matchesDivision(it) && matchesDate(it) && matchesStatus(it) }
         .let { passing -> passing + listOfNotNull(playerFilter?.let { pid -> groups.firstOrNull { it.playerId == pid } }) }
@@ -376,8 +376,9 @@ private fun PatchEventRow(
         DateBadge(date = group.dateEarned)
 
         Column(modifier = Modifier.weight(1f)) {
+            val divisionText = if (group.division.isBlank()) "No division" else "Div ${group.division}"
             Text(
-                text = "${group.playerName} · #${group.playerNumber} · Div ${group.division}",
+                text = "${group.playerName} · #${group.playerNumber} · $divisionText",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )

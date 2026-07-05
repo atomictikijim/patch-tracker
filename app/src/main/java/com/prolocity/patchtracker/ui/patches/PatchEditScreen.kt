@@ -47,7 +47,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
-import com.prolocity.patchtracker.data.DIVISION_LENGTH
 import com.prolocity.patchtracker.data.PatchAwardEvent
 import com.prolocity.patchtracker.data.PatchAwardLine
 import com.prolocity.patchtracker.data.PatchType
@@ -100,7 +99,8 @@ fun PatchEditScreen(
 
     var selectedPlayer by remember { mutableStateOf<Player?>(null) }
     var selectedSession by remember { mutableStateOf<Session?>(null) }
-    var division by remember { mutableStateOf("") }
+    // null = no choice made yet; "" = explicitly "No division"; otherwise a division code.
+    var division by remember { mutableStateOf<String?>(null) }
     var dateEarned by remember { mutableStateOf(LocalDate.now()) }
     var photoPath by remember { mutableStateOf<String?>(null) }
     var pendingPhotoPath by remember { mutableStateOf<String?>(null) }
@@ -199,15 +199,16 @@ fun PatchEditScreen(
     // Keep an already-recorded division selectable even if the player is no longer on a team in
     // it (e.g. editing an older award), so its value is never silently dropped.
     val divisionOptions = remember(playerDivisions, division) {
-        (playerDivisions + listOfNotNull(division.takeIf { it.isNotBlank() })).distinct().sorted()
+        (playerDivisions + listOfNotNull(division?.takeIf { it.isNotBlank() })).distinct().sorted()
     }
 
     // When creating, default the division to the player's only team division; if the current pick
-    // isn't one of the newly chosen player's divisions, clear it so a stale value can't be saved.
-    // Existing awards keep their recorded division (managed manually via the dropdown instead).
+    // isn't one of the newly chosen player's divisions, reset it (to their single division, or to
+    // no choice when they have zero/several). Existing awards keep their recorded division.
     LaunchedEffect(isNew, selectedPlayer?.id, playerDivisions) {
-        if (isNew && division !in playerDivisions) {
-            division = playerDivisions.singleOrNull().orEmpty()
+        val current = division
+        if (isNew && (current == null || current !in playerDivisions)) {
+            division = playerDivisions.singleOrNull()
         }
     }
 
@@ -215,7 +216,9 @@ fun PatchEditScreen(
     // added/edited, though it stays visible for reference.
     val isLocked = !isNew && existing?.sessionId?.let { sid -> sessions.find { it.id == sid }?.isFinalized } == true
 
-    val canSave = !isLocked && selectedPlayer != null && selectedSession != null && division.length == DIVISION_LENGTH &&
+    // A division must be chosen (a code or the explicit "No division"), but it may be blank —
+    // "No division" lets an award be kept for a player who isn't on a team.
+    val canSave = !isLocked && selectedPlayer != null && selectedSession != null && division != null &&
         lines.isNotEmpty() && lines.all { it.patchType != null }
 
     // A finalized session can't be picked for a new entry, but an existing (locked) entry
@@ -275,11 +278,7 @@ fun PatchEditScreen(
             DivisionDropdown(
                 selected = division,
                 options = divisionOptions,
-                placeholder = when {
-                    selectedPlayer == null -> "Select a player first"
-                    divisionOptions.isEmpty() -> "Player is not on a team"
-                    else -> "Select a division"
-                },
+                placeholder = if (selectedPlayer == null) "Select a player first" else "Select a division",
                 onSelected = { division = it },
                 modifier = Modifier.fillMaxWidth()
             )
@@ -390,7 +389,7 @@ fun PatchEditScreen(
                         id = existing?.id ?: 0,
                         playerId = selectedPlayer!!.id,
                         sessionId = selectedSession!!.id,
-                        division = division.trim(),
+                        division = division.orEmpty().trim(),
                         dateEarned = dateEarned,
                         photoPath = photoPath
                     )
@@ -548,30 +547,35 @@ private fun SessionDropdown(
     }
 }
 
-// Division picker limited to the divisions of the teams the selected player is on. Read-only
-// (no free text): the menu only opens when there are options to choose from.
+// Division picker limited to the divisions of the teams the selected player is on, plus an
+// explicit "No division" option (so an award can be kept for a player who isn't on a team).
+// Read-only, no free text. `selected` is null (unchosen), "" (No division), or a division code.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DivisionDropdown(
-    selected: String,
+    selected: String?,
     options: List<String>,
     placeholder: String,
     onSelected: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val open = expanded && options.isNotEmpty()
-    ExposedDropdownMenuBox(expanded = open, onExpandedChange = { expanded = it }, modifier = modifier) {
+    val displayText = when {
+        selected == null -> ""
+        selected.isBlank() -> "No division"
+        else -> selected
+    }
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }, modifier = modifier) {
         OutlinedTextField(
-            value = selected,
+            value = displayText,
             onValueChange = {},
             readOnly = true,
             label = { Text("Division") },
             placeholder = { Text(placeholder) },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = open) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier.fillMaxWidth().menuAnchor()
         )
-        ExposedDropdownMenu(expanded = open, onDismissRequest = { expanded = false }) {
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             options.forEach { division ->
                 DropdownMenuItem(
                     text = { Text(division) },
@@ -581,6 +585,13 @@ private fun DivisionDropdown(
                     }
                 )
             }
+            DropdownMenuItem(
+                text = { Text("No division") },
+                onClick = {
+                    onSelected("")
+                    expanded = false
+                }
+            )
         }
     }
 }
