@@ -17,8 +17,8 @@ android {
         // targetSdk/compileSdk track Android 14, the OS this app is built for.
         minSdk = 26
         targetSdk = 34
-        versionCode = 3
-        versionName = "0.1.3"
+        versionCode = 4
+        versionName = "0.1.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
