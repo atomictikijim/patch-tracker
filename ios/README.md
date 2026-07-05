@@ -25,7 +25,7 @@ open.
 
 ## Layout
 
-```
+```text
 PatchTracker/
   App/          App entry point + root TabView shell
   Data/
@@ -40,6 +40,15 @@ PatchTracker/
 
 ## Status
 
-Scaffold — Phase 0 (project setup) + Phase 1 core (data model layer, seeding,
-theme, patch-icon system, tab shell). List/edit screens are stubs pending
-Phases 2–6 in the port plan.
+- **Phase 0** — project setup (done).
+- **Phase 1 core** — data model layer, seeding, theme, patch-icon system, tab shell (done).
+- **Phase 2** — the four list screens (done): Patches (grouped by event, interdependent
+  Session/Division/Date/Player filters, Awarded/Owed status, "Repeat" flag, Mark Fulfilled,
+  swipe-to-delete), Players, Teams (division filter), Sessions (start-new). Add/edit and
+  detail screens are stubs (`ContentUnavailableView`) wired for navigation, pending Phase 3.
+- **Not yet compiled** — no Xcode in the authoring (Windows) environment, so the Swift is
+  unverified against a compiler. First Mac step: `xcodegen generate` then build and fix any
+  API mismatches (SwiftData/SwiftUI) before continuing.
+
+Pending: Phase 3 (editing flows), Phase 4 (camera, CSV import, share), Phase 5 (session
+backup), Phase 6 (help, polish, QA). See [`../IOS_PORT_PLAN.md`](../IOS_PORT_PLAN.md).

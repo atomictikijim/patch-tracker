@@ -26,4 +26,12 @@ enum LeagueColors {
     static let gray = Color(hex: 0x5F6368)
     static let red = Color(hex: 0x6A1B1B)
     static let green = Color(hex: 0x2E7D32)
+
+    // Status/badge palette (Android Green80/Amber80 fills with Green40/Amber40 text, plus the
+    // gold "Repeat" chip).
+    static let green80 = Color(hex: 0xA5D6A7)
+    static let green40 = Color(hex: 0x2E7D32)
+    static let amber80 = Color(hex: 0xFFE082)
+    static let amber40 = Color(hex: 0xA36A00)
+    static let goldContainer = Color(hex: 0xFFE082)
 }

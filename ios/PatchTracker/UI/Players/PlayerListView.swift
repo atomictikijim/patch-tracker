@@ -1,15 +1,41 @@
 import SwiftUI
 import SwiftData
 
-/// Stub — the league roster. To be built in Phase 2/3: player list, view/edit-mode detail with
-/// earned patches + teams, and CSV import.
+/// The league roster — a searchable list of players. Rows push to the player detail; the toolbar
+/// "+" opens the add form. (CSV import and the read-only detail/edit screens land in later phases.)
 struct PlayerListView: View {
+    @Query(sort: \Player.name) private var players: [Player]
+    @State private var showingAdd = false
+
     var body: some View {
-        ContentUnavailableView(
-            "Players",
-            systemImage: "person",
-            description: Text("The roster is coming in Phase 2. See IOS_PORT_PLAN.md.")
-        )
+        Group {
+            if players.isEmpty {
+                ContentUnavailableView(
+                    "No Players",
+                    systemImage: "person.2",
+                    description: Text("Tap + to add your roster.")
+                )
+            } else {
+                List(players) { player in
+                    NavigationLink(value: player) {
+                        HStack(spacing: 12) {
+                            InitialsAvatar(name: player.name)
+                            Text(player.name).fontWeight(.bold)
+                            Spacer()
+                            Text("#\(player.playerNumber)").foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+        }
         .navigationTitle("Players")
+        .navigationDestination(for: Player.self) { PlayerDetailView(player: $0) }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button { showingAdd = true } label: { Image(systemName: "plus") }
+                    .accessibilityLabel("Add player")
+            }
+        }
+        .sheet(isPresented: $showingAdd) { PlayerEditView(player: nil) }
     }
 }
