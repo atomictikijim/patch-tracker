@@ -19,3 +19,10 @@ app/release/
 *.ap_
 *.dex
 *.class
+
+# Local-only test dataset — contains real league members' names/phone/email (PII).
+# Kept locally for the on-device reload workflow; never publish. See testdata/README.md.
+/testdata/
+
+# Demo screen recordings: large binaries, not part of source. Host externally if needed.
+/docs/demos/
