@@ -11,10 +11,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -34,11 +31,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.prolocity.patchtracker.data.DIVISION_LENGTH
 import com.prolocity.patchtracker.data.MAX_TEAM_PLAYERS
-import com.prolocity.patchtracker.data.Player
 import com.prolocity.patchtracker.data.Team
 import com.prolocity.patchtracker.ui.PatchTrackerViewModel
 import com.prolocity.patchtracker.ui.components.BrandTopAppBar
 import com.prolocity.patchtracker.ui.components.ConfirmDialog
+import com.prolocity.patchtracker.ui.components.PlayerLookupField
 import com.prolocity.patchtracker.ui.components.SaveButton
 import com.prolocity.patchtracker.ui.components.SectionLabel
 import com.prolocity.patchtracker.ui.navigation.Routes
@@ -144,11 +141,11 @@ fun TeamEditScreen(
                             it.id !in chosenElsewhere && (it.id !in takenInDivision || it.id == slotSelectedId)
                         }
                         val selectedPlayer = players.find { it.id == slotSelectedId }
-                        PlayerSlotDropdown(
+                        PlayerLookupField(
                             label = if (slot == 0) "Player 1 (Captain)" else "Player ${slot + 1}",
                             players = availablePlayers,
                             selected = selectedPlayer,
-                            onSelected = { player ->
+                            onSelectedChange = { player ->
                                 slotPlayerIds = slotPlayerIds.toMutableList().also { it[slot] = player?.id }
                             }
                         )
@@ -225,45 +222,3 @@ fun TeamEditScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun PlayerSlotDropdown(
-    label: String,
-    players: List<Player>,
-    selected: Player?,
-    onSelected: (Player?) -> Unit
-) {
-    var expanded by remember { mutableStateOf(false) }
-    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
-        OutlinedTextField(
-            value = selected?.let { "${it.name} (#${it.playerNumber})" } ?: "",
-            onValueChange = {},
-            readOnly = true,
-            label = { Text(label) },
-            placeholder = { Text("None") },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier.fillMaxWidth().menuAnchor()
-        )
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
-            DropdownMenuItem(
-                text = { Text("None") },
-                onClick = {
-                    onSelected(null)
-                    expanded = false
-                }
-            )
-            players.forEach { player ->
-                DropdownMenuItem(
-                    text = { Text("${player.name} (#${player.playerNumber})") },
-                    onClick = {
-                        onSelected(player)
-                        expanded = false
-                    }
-                )
-            }
-        }
-    }
-}
