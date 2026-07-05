@@ -49,6 +49,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.prolocity.patchtracker.data.DIVISION_LENGTH
 import com.prolocity.patchtracker.data.PatchAwardEvent
 import com.prolocity.patchtracker.data.PatchAwardLine
 import com.prolocity.patchtracker.data.PatchType
@@ -190,7 +191,7 @@ fun PatchEditScreen(
     // added/edited, though it stays visible for reference.
     val isLocked = !isNew && existing?.sessionId?.let { sid -> sessions.find { it.id == sid }?.isFinalized } == true
 
-    val canSave = !isLocked && selectedPlayer != null && selectedSession != null && division.isNotBlank() &&
+    val canSave = !isLocked && selectedPlayer != null && selectedSession != null && division.length == DIVISION_LENGTH &&
         lines.isNotEmpty() && lines.all { it.patchType != null }
 
     // A finalized session can't be picked for a new entry, but an existing (locked) entry
@@ -248,9 +249,11 @@ fun PatchEditScreen(
 
             OutlinedTextField(
                 value = division,
-                onValueChange = { division = it },
+                onValueChange = { division = it.filter(Char::isDigit).take(DIVISION_LENGTH) },
                 label = { Text("Division") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                isError = division.isNotEmpty() && division.length < DIVISION_LENGTH,
+                supportingText = { Text("Must be exactly $DIVISION_LENGTH digits") },
                 modifier = Modifier.fillMaxWidth()
             )
 

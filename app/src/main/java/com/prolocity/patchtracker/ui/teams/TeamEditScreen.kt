@@ -32,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.prolocity.patchtracker.data.DIVISION_LENGTH
 import com.prolocity.patchtracker.data.MAX_TEAM_PLAYERS
 import com.prolocity.patchtracker.data.Player
 import com.prolocity.patchtracker.data.Team
@@ -75,7 +76,7 @@ fun TeamEditScreen(
         }
     }
 
-    val canSave = name.isNotBlank() && division.isNotBlank()
+    val canSave = name.isNotBlank() && division.length == DIVISION_LENGTH
 
     Scaffold(
         topBar = {
@@ -116,9 +117,11 @@ fun TeamEditScreen(
 
                 OutlinedTextField(
                     value = division,
-                    onValueChange = { division = it },
+                    onValueChange = { division = it.filter(Char::isDigit).take(DIVISION_LENGTH) },
                     label = { Text("Division") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    isError = division.isNotEmpty() && division.length < DIVISION_LENGTH,
+                    supportingText = { Text("Must be exactly $DIVISION_LENGTH digits") },
                     modifier = Modifier.fillMaxWidth()
                 )
 

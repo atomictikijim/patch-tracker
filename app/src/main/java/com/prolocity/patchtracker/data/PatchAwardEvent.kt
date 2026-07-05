@@ -6,6 +6,10 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import java.time.LocalDate
 
+// APA division codes are always exactly this many digits. Enforced in the edit screens
+// for both patch awards (this entity's `division`) and teams (`Team.division`).
+const val DIVISION_LENGTH = 3
+
 @Entity(
     tableName = "patch_award_events",
     foreignKeys = [
