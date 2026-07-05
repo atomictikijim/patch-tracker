@@ -126,7 +126,11 @@ fun PatchListScreen(
                 photoPath = first.photoPath,
                 lines = lines
             )
-        }.sortedWith(compareByDescending<PatchEventGroup> { it.dateEarned }.thenBy { it.playerName })
+        }.sortedWith(
+            compareByDescending<PatchEventGroup> { it.dateEarned }
+                .thenBy { it.division }
+                .thenBy { it.playerName }
+        )
     }
 
     val filtered = remember(groups, filter, sessionFilterId) {
