@@ -48,6 +48,7 @@ fun PlayerEditScreen(
     onBack: () -> Unit
 ) {
     val isNew = playerId == Routes.NEW_ID
+    val players by viewModel.players.collectAsStateWithLifecycle()
     val patchAwards by viewModel.patchAwards.collectAsStateWithLifecycle()
     val teams by viewModel.teams.collectAsStateWithLifecycle()
 
@@ -72,7 +73,13 @@ fun PlayerEditScreen(
         }
     }
 
-    val canSave = name.isNotBlank() && playerNumber.isNotBlank()
+    // Player number is a unique identifier — block saving one another player already holds
+    // (excluding this player when editing). Trimmed to match how it's persisted.
+    val duplicateNumber = playerNumber.isNotBlank() && players.any {
+        it.id != playerId && it.playerNumber.trim().equals(playerNumber.trim(), ignoreCase = true)
+    }
+
+    val canSave = name.isNotBlank() && playerNumber.isNotBlank() && !duplicateNumber
 
     val earnedPatches = remember(patchAwards, playerId) {
         patchAwards
@@ -127,6 +134,10 @@ fun PlayerEditScreen(
                     value = playerNumber,
                     onValueChange = { playerNumber = it },
                     label = { Text("Player Number") },
+                    isError = duplicateNumber,
+                    supportingText = if (duplicateNumber) {
+                        { Text("Another player already has this number") }
+                    } else null,
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(

@@ -74,3 +74,12 @@ val MIGRATION_10_11 = object : Migration(10, 11) {
         db.execSQL("ALTER TABLE sessions ADD COLUMN isFinalized INTEGER NOT NULL DEFAULT 0")
     }
 }
+
+// Enforces a unique player number: adds the unique index Room now expects on players. The
+// index name must match Room's generated name (index_<table>_<column>) or the identity-hash
+// check fails on open. Existing devices had no duplicate numbers, so the index builds cleanly.
+val MIGRATION_11_12 = object : Migration(11, 12) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_players_playerNumber` ON `players` (`playerNumber`)")
+    }
+}
