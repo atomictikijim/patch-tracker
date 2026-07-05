@@ -95,6 +95,10 @@ fun PatchListScreen(
     var filter by remember { mutableStateOf(StatusFilter.ALL) }
     var sessionFilterId by remember { mutableStateOf<Long?>(null) }
     var sessionFilterTouched by remember { mutableStateOf(false) }
+    // Additional, independently-combinable filters (null = no filter on that field).
+    var divisionFilter by remember { mutableStateOf<String?>(null) }
+    var playerFilter by remember { mutableStateOf<Long?>(null) }
+    var dateFilter by remember { mutableStateOf<LocalDate?>(null) }
     var pendingDelete by remember { mutableStateOf<PatchEventGroup?>(null) }
     var selectionMode by remember { mutableStateOf(false) }
     var selectedEventIds by remember { mutableStateOf<Set<Long>>(emptySet()) }
@@ -108,6 +112,14 @@ fun PatchListScreen(
 
     LaunchedEffect(currentSession) {
         if (!sessionFilterTouched) sessionFilterId = currentSession?.id
+    }
+
+    // Division/Player/Date options are scoped to the selected session, so clear those filters
+    // when the session changes to avoid a selection dangling on values no longer offered.
+    LaunchedEffect(sessionFilterId) {
+        divisionFilter = null
+        playerFilter = null
+        dateFilter = null
     }
 
     val groups = remember(patchAwards) {
@@ -133,9 +145,28 @@ fun PatchListScreen(
         )
     }
 
-    val filtered = remember(groups, filter, sessionFilterId) {
+    // Filter dropdown options, drawn from the awards in the selected session.
+    val sessionScoped = remember(groups, sessionFilterId) {
+        groups.filter { sessionFilterId == null || it.sessionId == sessionFilterId }
+    }
+    val divisionOptions = remember(sessionScoped) {
+        sessionScoped.map { it.division }.distinct().sorted().map { it to it }
+    }
+    val playerOptions = remember(sessionScoped) {
+        sessionScoped.distinctBy { it.playerId }
+            .sortedBy { it.playerName }
+            .map { it.playerId to "${it.playerName} (#${it.playerNumber})" }
+    }
+    val dateOptions = remember(sessionScoped) {
+        sessionScoped.map { it.dateEarned }.distinct().sortedDescending().map { it to it.formatted() }
+    }
+
+    val filtered = remember(groups, filter, sessionFilterId, divisionFilter, playerFilter, dateFilter) {
         groups.mapNotNull { group ->
             if (sessionFilterId != null && group.sessionId != sessionFilterId) return@mapNotNull null
+            if (divisionFilter != null && group.division != divisionFilter) return@mapNotNull null
+            if (playerFilter != null && group.playerId != playerFilter) return@mapNotNull null
+            if (dateFilter != null && group.dateEarned != dateFilter) return@mapNotNull null
             val matching = when (filter) {
                 StatusFilter.ALL -> group.lines
                 StatusFilter.AWARDED -> group.lines.filter { !it.isOutstanding }
@@ -196,6 +227,37 @@ fun PatchListScreen(
                     sessionFilterTouched = true
                     sessionFilterId = id
                 },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilterDropdown(
+                    label = "Division",
+                    allLabel = "All",
+                    options = divisionOptions,
+                    selected = divisionFilter,
+                    onSelected = { divisionFilter = it },
+                    modifier = Modifier.weight(1f)
+                )
+                FilterDropdown(
+                    label = "Date Earned",
+                    allLabel = "All",
+                    options = dateOptions,
+                    selected = dateFilter,
+                    onSelected = { dateFilter = it },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            FilterDropdown(
+                label = "Player",
+                allLabel = "All",
+                options = playerOptions,
+                selected = playerFilter,
+                onSelected = { playerFilter = it },
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
             )
 
@@ -391,6 +453,53 @@ private fun SessionFilterDropdown(
                     text = { Text(session.name) },
                     onClick = {
                         onSelected(session.id)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+// Generic "filter by one value or all" dropdown. [options] are (value, displayLabel) pairs;
+// a null selection means no filter (shows [allLabel]). Used for the Division, Player, and
+// Date Earned filters, which combine with the session and status filters.
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun <T> FilterDropdown(
+    label: String,
+    allLabel: String,
+    options: List<Pair<T, String>>,
+    selected: T?,
+    onSelected: (T?) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val selectedText = if (selected == null) allLabel
+        else options.firstOrNull { it.first == selected }?.second ?: allLabel
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }, modifier = modifier) {
+        OutlinedTextField(
+            value = selectedText,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(label) },
+            singleLine = true,
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier.fillMaxWidth().menuAnchor()
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenuItem(
+                text = { Text(allLabel) },
+                onClick = {
+                    onSelected(null)
+                    expanded = false
+                }
+            )
+            options.forEach { (value, text) ->
+                DropdownMenuItem(
+                    text = { Text(text) },
+                    onClick = {
+                        onSelected(value)
                         expanded = false
                     }
                 )
