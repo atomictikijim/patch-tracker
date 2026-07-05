@@ -60,6 +60,7 @@ import com.prolocity.patchtracker.ui.components.BrandTopAppBar
 import com.prolocity.patchtracker.ui.components.ConfirmDialog
 import com.prolocity.patchtracker.ui.components.DateBadge
 import com.prolocity.patchtracker.ui.components.PatchIcon
+import com.prolocity.patchtracker.ui.components.RepeatBadge
 import com.prolocity.patchtracker.ui.components.StatusBadge
 import com.prolocity.patchtracker.ui.components.formatted
 import java.io.File
@@ -120,6 +121,23 @@ fun PatchListScreen(
         divisionFilter = null
         playerFilter = null
         dateFilter = null
+    }
+
+    // A patch line is a "repeat" if the same player earned the same patch type more than once
+    // within the same session AND division. The earliest line per (player, patchType, session,
+    // division) is the first award; every later one is flagged. Same patch in a different division
+    // is a separate first award, so division is part of the key. Computed across all award lines
+    // (not just within one event) so repeats spanning separate award entries are caught too.
+    val repeatLineIds = remember(patchAwards) {
+        patchAwards
+            .groupBy { listOf(it.playerId, it.patchTypeId, it.sessionId, it.division) }
+            .flatMap { (_, lines) ->
+                lines
+                    .sortedWith(compareBy({ it.dateEarned }, { it.eventId }, { it.lineId }))
+                    .drop(1)
+                    .map { it.lineId }
+            }
+            .toSet()
     }
 
     val groups = remember(patchAwards) {
@@ -307,6 +325,7 @@ fun PatchListScreen(
                         }
                         PatchEventRow(
                             group = group,
+                            repeatLineIds = repeatLineIds,
                             selectionMode = selectionMode,
                             selected = selected,
                             onClick = {
@@ -354,6 +373,7 @@ fun PatchListScreen(
 @Composable
 private fun PatchEventRow(
     group: PatchEventGroup,
+    repeatLineIds: Set<Long>,
     selectionMode: Boolean,
     selected: Boolean,
     onClick: () -> Unit,
@@ -402,6 +422,9 @@ private fun PatchEventRow(
                         size = 24.dp
                     )
                     Text(line.patchName, modifier = Modifier.weight(1f))
+                    if (line.lineId in repeatLineIds) {
+                        RepeatBadge()
+                    }
                     StatusBadge(awarded = !line.isOutstanding)
                     if (line.isOutstanding && !group.sessionFinalized && !selectionMode) {
                         TextButton(onClick = { onMarkFulfilled(line.lineId) }) { Text("Mark Fulfilled") }

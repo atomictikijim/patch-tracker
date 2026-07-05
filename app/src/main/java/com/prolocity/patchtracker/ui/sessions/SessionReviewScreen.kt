@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -23,6 +23,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,6 +35,7 @@ import coil.compose.AsyncImage
 import com.prolocity.patchtracker.ui.PatchTrackerViewModel
 import com.prolocity.patchtracker.ui.components.BrandTopAppBar
 import com.prolocity.patchtracker.ui.components.PatchIcon
+import com.prolocity.patchtracker.ui.components.RepeatBadge
 import com.prolocity.patchtracker.ui.components.StatusBadge
 import com.prolocity.patchtracker.ui.components.formatted
 import java.io.File
@@ -80,8 +82,24 @@ fun SessionReviewScreen(
                     style = MaterialTheme.typography.bodyLarge
                 )
             } else {
+                // Flag repeat patches: within this session, the same player earning the same
+                // patch type more than once in the same division. First award (earliest date) is
+                // unflagged; later ones are marked. Same patch in a different division is separate.
+                // Keyed by (award index, patch index) since the backup carries no line/event ids.
+                val repeatRefs = remember(backup.awards) {
+                    backup.awards
+                        .flatMapIndexed { ai, award ->
+                            award.patches.mapIndexed { pi, patch ->
+                                Triple(ai to pi, award.dateEarned, listOf(award.playerNumber, award.division, patch.name))
+                            }
+                        }
+                        .groupBy { it.third }
+                        .flatMap { (_, refs) -> refs.sortedBy { it.second }.drop(1) }
+                        .map { it.first }
+                        .toSet()
+                }
                 LazyColumn(contentPadding = PaddingValues(bottom = 16.dp)) {
-                    items(backup.awards) { award ->
+                    itemsIndexed(backup.awards) { awardIndex, award ->
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
                             verticalAlignment = Alignment.Top,
@@ -94,7 +112,7 @@ fun SessionReviewScreen(
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold
                                 )
-                                award.patches.forEach { patch ->
+                                award.patches.forEachIndexed { patchIndex, patch ->
                                     Row(
                                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                                         verticalAlignment = Alignment.CenterVertically,
@@ -108,6 +126,9 @@ fun SessionReviewScreen(
                                             size = 24.dp
                                         )
                                         Text(patch.name, modifier = Modifier.weight(1f))
+                                        if ((awardIndex to patchIndex) in repeatRefs) {
+                                            RepeatBadge()
+                                        }
                                         StatusBadge(awarded = patch.awardedAtTime || patch.fulfilledDate != null)
                                     }
                                 }

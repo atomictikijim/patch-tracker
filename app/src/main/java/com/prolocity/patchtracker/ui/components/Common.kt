@@ -38,6 +38,8 @@ import com.prolocity.patchtracker.ui.theme.Amber40
 import com.prolocity.patchtracker.ui.theme.Amber80
 import com.prolocity.patchtracker.ui.theme.Green40
 import com.prolocity.patchtracker.ui.theme.Green80
+import com.prolocity.patchtracker.ui.theme.LeagueGold
+import com.prolocity.patchtracker.ui.theme.LeagueGoldContainerLight
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -152,6 +154,23 @@ fun StatusBadge(awarded: Boolean, modifier: Modifier = Modifier) {
         textAlign = TextAlign.Center,
         modifier = modifier
             .background(background, RoundedCornerShape(4.dp))
+            .padding(horizontal = 10.dp, vertical = 4.dp)
+    )
+}
+
+// Flags a patch line that is not the first time this player earned this patch type within the
+// same session and division (a duplicate/repeat award). Styled in the gold accent so it reads as
+// a "heads up, check this" highlight distinct from the green/amber Awarded/Owed status.
+@Composable
+fun RepeatBadge(modifier: Modifier = Modifier) {
+    Text(
+        text = "Repeat",
+        color = LeagueGold,
+        style = MaterialTheme.typography.labelMedium,
+        fontWeight = FontWeight.Bold,
+        textAlign = TextAlign.Center,
+        modifier = modifier
+            .background(LeagueGoldContainerLight, RoundedCornerShape(4.dp))
             .padding(horizontal = 10.dp, vertical = 4.dp)
     )
 }
