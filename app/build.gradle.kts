@@ -45,7 +45,19 @@ android {
     buildFeatures {
         compose = true
     }
+
+    // Bundle the repo-root FEATURES.md as an app asset so the in-app Help screens render the exact
+    // same doc that CLAUDE.md requires be kept current with every functional change — one source of
+    // truth, copied in at build time (see copyFeaturesDoc below) rather than a hand-maintained copy.
+    sourceSets["main"].assets.srcDir(layout.buildDirectory.dir("generated/helpAssets"))
 }
+
+val copyFeaturesDoc by tasks.registering(Copy::class) {
+    from(rootProject.file("FEATURES.md"))
+    into(layout.buildDirectory.dir("generated/helpAssets"))
+}
+
+tasks.named("preBuild") { dependsOn(copyFeaturesDoc) }
 
 dependencies {
     implementation(platform("androidx.compose:compose-bom:2024.12.01"))

@@ -39,6 +39,7 @@ import com.prolocity.patchtracker.data.ImportSummary
 import com.prolocity.patchtracker.ui.PatchTrackerViewModel
 import com.prolocity.patchtracker.ui.components.BrandTopAppBar
 import com.prolocity.patchtracker.ui.components.CsvImportResultDialog
+import com.prolocity.patchtracker.ui.components.HelpAction
 import com.prolocity.patchtracker.ui.components.InitialsAvatar
 import com.prolocity.patchtracker.ui.components.CSV_MIME_TYPES
 import kotlinx.coroutines.launch
@@ -71,6 +72,7 @@ fun PlayerListScreen(
                     IconButton(onClick = { importLauncher.launch(CSV_MIME_TYPES) }) {
                         Icon(Icons.Filled.UploadFile, contentDescription = "Import players from CSV")
                     }
+                    HelpAction("Players")
                 }
             )
         },

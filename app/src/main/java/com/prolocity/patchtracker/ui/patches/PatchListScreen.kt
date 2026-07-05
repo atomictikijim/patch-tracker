@@ -59,6 +59,7 @@ import com.prolocity.patchtracker.ui.PatchTrackerViewModel
 import com.prolocity.patchtracker.ui.components.BrandTopAppBar
 import com.prolocity.patchtracker.ui.components.ConfirmDialog
 import com.prolocity.patchtracker.ui.components.DateBadge
+import com.prolocity.patchtracker.ui.components.HelpAction
 import com.prolocity.patchtracker.ui.components.PatchIcon
 import com.prolocity.patchtracker.ui.components.RepeatBadge
 import com.prolocity.patchtracker.ui.components.StatusBadge
@@ -240,6 +241,7 @@ fun PatchListScreen(
                                 Icon(Icons.Filled.Checklist, contentDescription = "Select awards to share")
                             }
                         }
+                        HelpAction("Patches")
                     }
                 )
             }

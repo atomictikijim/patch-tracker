@@ -46,6 +46,7 @@ import com.prolocity.patchtracker.ui.PatchTrackerViewModel
 import com.prolocity.patchtracker.ui.components.BrandTopAppBar
 import com.prolocity.patchtracker.ui.components.CsvImportResultDialog
 import com.prolocity.patchtracker.ui.components.CSV_MIME_TYPES
+import com.prolocity.patchtracker.ui.components.HelpAction
 import com.prolocity.patchtracker.ui.components.InitialsAvatar
 import kotlinx.coroutines.launch
 
@@ -87,6 +88,7 @@ fun TeamListScreen(
                     IconButton(onClick = { importLauncher.launch(CSV_MIME_TYPES) }) {
                         Icon(Icons.Filled.UploadFile, contentDescription = "Import teams from CSV")
                     }
+                    HelpAction("Teams")
                 }
             )
         },

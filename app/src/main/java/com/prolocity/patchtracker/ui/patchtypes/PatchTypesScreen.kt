@@ -34,6 +34,7 @@ import com.prolocity.patchtracker.data.PatchType
 import com.prolocity.patchtracker.ui.PatchTrackerViewModel
 import com.prolocity.patchtracker.ui.components.BrandTopAppBar
 import com.prolocity.patchtracker.ui.components.ConfirmDialog
+import com.prolocity.patchtracker.ui.components.HelpAction
 import com.prolocity.patchtracker.ui.components.PatchTypeFormDialog
 import com.prolocity.patchtracker.ui.components.PatchTypeIcon
 
@@ -46,7 +47,7 @@ fun PatchTypesScreen(viewModel: PatchTrackerViewModel) {
     var pendingDelete by remember { mutableStateOf<PatchType?>(null) }
 
     Scaffold(
-        topBar = { BrandTopAppBar(title = "Patch Types") },
+        topBar = { BrandTopAppBar(title = "Patch Types", actions = { HelpAction("Patch Types") }) },
         floatingActionButton = {
             FloatingActionButton(onClick = { showAddDialog = true }) {
                 Icon(Icons.Filled.Add, contentDescription = "Add patch type")
