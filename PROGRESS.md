@@ -12,6 +12,7 @@ None pending. Pick from "Suggested next steps" below by priority, or continue wi
 
 ## Suggested next steps
 
+- **Update the feature documentation** — `C:\Users\james\Downloads\Patch Tracker - Feature Documentation.docx` needs to be brought current with the functionality added since it was last written (e.g. validation rules, the Patches-list filters, "No division" awards, and the "Repeat" duplicate-award indicator).
 - **Tests** — `ExampleInstrumentedTest.kt` / `ExampleUnitTest.kt` are untouched template stubs. Nothing exercises the DAOs, the Awarded/Owed/fulfillment logic, or the patch-icon spec mapping.
 - **Real Room migrations** — `AppDatabase` still uses `fallbackToDestructiveMigration()` as the catch-all for any version gap other than 9→10 (which now has a real `Migration`, see NOTES.md 2026-07-04). Any future schema bump from version 10 onward should get its own real `Migration` too, now that the app carries session/award history worth preserving.
 - **Bulk player import** — every player is currently added one at a time; a CSV roster import would help onboarding a full league.
