@@ -145,28 +145,43 @@ fun PatchListScreen(
         )
     }
 
-    // Filter dropdown options, drawn from the awards in the selected session.
-    val sessionScoped = remember(groups, sessionFilterId) {
-        groups.filter { sessionFilterId == null || it.sessionId == sessionFilterId }
+    // Group-level filter predicates, reused for both the visible list and to narrow each
+    // dropdown's options.
+    fun matchesStatus(g: PatchEventGroup) = when (filter) {
+        StatusFilter.ALL -> true
+        StatusFilter.AWARDED -> g.lines.any { !it.isOutstanding }
+        StatusFilter.OWED -> g.lines.any { it.isOutstanding }
     }
-    val divisionOptions = remember(sessionScoped) {
-        sessionScoped.map { it.division }.distinct().sorted().map { it to it }
-    }
-    val playerOptions = remember(sessionScoped) {
-        sessionScoped.distinctBy { it.playerId }
-            .sortedBy { it.playerName }
-            .map { it.playerId to "${it.playerName} (#${it.playerNumber})" }
-    }
-    val dateOptions = remember(sessionScoped) {
-        sessionScoped.map { it.dateEarned }.distinct().sortedDescending().map { it to it.formatted() }
-    }
+    fun matchesSession(g: PatchEventGroup) = sessionFilterId == null || g.sessionId == sessionFilterId
+    fun matchesDivision(g: PatchEventGroup) = divisionFilter == null || g.division == divisionFilter
+    fun matchesPlayer(g: PatchEventGroup) = playerFilter == null || g.playerId == playerFilter
+    fun matchesDate(g: PatchEventGroup) = dateFilter == null || g.dateEarned == dateFilter
+
+    // Each dropdown offers only values still present once the OTHER active filters are applied
+    // (its own filter excluded), so the filters progressively narrow one another. The current
+    // selection is unioned back in so it stays visible/clearable even if it now matches nothing.
+    val divisionOptions = groups
+        .filter { matchesSession(it) && matchesPlayer(it) && matchesDate(it) && matchesStatus(it) }
+        .map { it.division }
+        .let { (it + listOfNotNull(divisionFilter)).distinct().sorted() }
+        .map { it to it }
+    val playerOptions = groups
+        .filter { matchesSession(it) && matchesDivision(it) && matchesDate(it) && matchesStatus(it) }
+        .let { passing -> passing + listOfNotNull(playerFilter?.let { pid -> groups.firstOrNull { it.playerId == pid } }) }
+        .distinctBy { it.playerId }
+        .sortedBy { it.playerName }
+        .map { it.playerId to "${it.playerName} (#${it.playerNumber})" }
+    val dateOptions = groups
+        .filter { matchesSession(it) && matchesDivision(it) && matchesPlayer(it) && matchesStatus(it) }
+        .map { it.dateEarned }
+        .let { (it + listOfNotNull(dateFilter)).distinct().sortedDescending() }
+        .map { it to it.formatted() }
 
     val filtered = remember(groups, filter, sessionFilterId, divisionFilter, playerFilter, dateFilter) {
         groups.mapNotNull { group ->
-            if (sessionFilterId != null && group.sessionId != sessionFilterId) return@mapNotNull null
-            if (divisionFilter != null && group.division != divisionFilter) return@mapNotNull null
-            if (playerFilter != null && group.playerId != playerFilter) return@mapNotNull null
-            if (dateFilter != null && group.dateEarned != dateFilter) return@mapNotNull null
+            if (!matchesSession(group) || !matchesDivision(group) || !matchesPlayer(group) || !matchesDate(group)) {
+                return@mapNotNull null
+            }
             val matching = when (filter) {
                 StatusFilter.ALL -> group.lines
                 StatusFilter.AWARDED -> group.lines.filter { !it.isOutstanding }
