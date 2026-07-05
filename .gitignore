@@ -26,3 +26,7 @@ app/release/
 
 # Demo screen recordings: large binaries, not part of source. Host externally if needed.
 /docs/demos/
+
+# Release signing secrets — NEVER commit. Keep a backup; the same key must sign every update.
+/keystore.properties
+/keystore/
