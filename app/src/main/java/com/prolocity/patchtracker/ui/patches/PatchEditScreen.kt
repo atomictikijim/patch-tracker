@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -45,7 +44,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
@@ -93,6 +91,7 @@ fun PatchEditScreen(
     val patchTypes by viewModel.patchTypes.collectAsStateWithLifecycle()
     val sessions by viewModel.sessions.collectAsStateWithLifecycle()
     val currentSession by viewModel.currentSession.collectAsStateWithLifecycle()
+    val teams by viewModel.teams.collectAsStateWithLifecycle()
 
     var loaded by remember { mutableStateOf(false) }
     var existing by remember { mutableStateOf<PatchAwardEvent?>(null) }
@@ -188,6 +187,30 @@ fun PatchEditScreen(
         }
     }
 
+    // The division options are the divisions of the teams the selected player is rostered on.
+    val playerDivisions = remember(teams, selectedPlayer) {
+        val pid = selectedPlayer?.id
+        if (pid == null) emptyList()
+        else teams.filter { tw -> tw.members.any { it.id == pid } }
+            .map { it.team.division }
+            .distinct()
+            .sorted()
+    }
+    // Keep an already-recorded division selectable even if the player is no longer on a team in
+    // it (e.g. editing an older award), so its value is never silently dropped.
+    val divisionOptions = remember(playerDivisions, division) {
+        (playerDivisions + listOfNotNull(division.takeIf { it.isNotBlank() })).distinct().sorted()
+    }
+
+    // When creating, default the division to the player's only team division; if the current pick
+    // isn't one of the newly chosen player's divisions, clear it so a stale value can't be saved.
+    // Existing awards keep their recorded division (managed manually via the dropdown instead).
+    LaunchedEffect(isNew, selectedPlayer?.id, playerDivisions) {
+        if (isNew && division !in playerDivisions) {
+            division = playerDivisions.singleOrNull().orEmpty()
+        }
+    }
+
     // An event whose session has already been exported is locked: it can no longer be
     // added/edited, though it stays visible for reference.
     val isLocked = !isNew && existing?.sessionId?.let { sid -> sessions.find { it.id == sid }?.isFinalized } == true
@@ -249,13 +272,15 @@ fun PatchEditScreen(
                 onSelected = { selectedSession = it }
             )
 
-            OutlinedTextField(
-                value = division,
-                onValueChange = { division = it.filter(Char::isDigit).take(DIVISION_LENGTH) },
-                label = { Text("Division") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                isError = division.isNotEmpty() && division.length < DIVISION_LENGTH,
-                supportingText = { Text("Must be exactly $DIVISION_LENGTH digits") },
+            DivisionDropdown(
+                selected = division,
+                options = divisionOptions,
+                placeholder = when {
+                    selectedPlayer == null -> "Select a player first"
+                    divisionOptions.isEmpty() -> "Player is not on a team"
+                    else -> "Select a division"
+                },
+                onSelected = { division = it },
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -515,6 +540,43 @@ private fun SessionDropdown(
                     text = { Text(session.name) },
                     onClick = {
                         onSelected(session)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+// Division picker limited to the divisions of the teams the selected player is on. Read-only
+// (no free text): the menu only opens when there are options to choose from.
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DivisionDropdown(
+    selected: String,
+    options: List<String>,
+    placeholder: String,
+    onSelected: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val open = expanded && options.isNotEmpty()
+    ExposedDropdownMenuBox(expanded = open, onExpandedChange = { expanded = it }, modifier = modifier) {
+        OutlinedTextField(
+            value = selected,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Division") },
+            placeholder = { Text(placeholder) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = open) },
+            modifier = Modifier.fillMaxWidth().menuAnchor()
+        )
+        ExposedDropdownMenu(expanded = open, onDismissRequest = { expanded = false }) {
+            options.forEach { division ->
+                DropdownMenuItem(
+                    text = { Text(division) },
+                    onClick = {
+                        onSelected(division)
                         expanded = false
                     }
                 )
