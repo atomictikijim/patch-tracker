@@ -1,6 +1,6 @@
 # Patch Tracker — Feature Guide
 
-*Version 0.1.4 · last updated 2026-07-05*
+*Version 0.1.5 · last updated 2026-07-05*
 
 Patch Tracker is an Android app for a local APA (American Poolplayers Association)
 pool league. It keeps track of which patches each player has earned, whether the
@@ -132,6 +132,8 @@ A brand-new player opens straight into the edit form.
 A team has a **name**, a **division** (a 3-digit code), and up to **8 players**
 drawn from the roster. Player slot 1 is the **team captain**.
 
+- A **Division** dropdown at the top of the Teams list filters it to a single
+  division (or **All Divisions** for the full list).
 - Opening an existing team shows a read-only view (name, division, ordered player
   list with "— Captain" on the first slot) with an **Edit Team** button. A
   brand-new team opens straight into edit mode.
