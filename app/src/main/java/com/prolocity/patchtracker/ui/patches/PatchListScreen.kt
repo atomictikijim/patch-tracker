@@ -1,7 +1,9 @@
 package com.prolocity.patchtracker.ui.patches
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,7 +18,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Checklist
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -41,6 +47,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -60,7 +67,7 @@ import java.time.LocalDate
 
 private enum class StatusFilter(val label: String) { ALL("All"), AWARDED("Awarded"), OWED("Owed") }
 
-private data class PatchEventGroup(
+internal data class PatchEventGroup(
     val eventId: Long,
     val playerId: Long,
     val playerName: String,
@@ -81,6 +88,7 @@ fun PatchListScreen(
     onAddClick: () -> Unit,
     onEditClick: (Long) -> Unit
 ) {
+    val context = LocalContext.current
     val patchAwards by viewModel.patchAwards.collectAsStateWithLifecycle()
     val sessions by viewModel.sessions.collectAsStateWithLifecycle()
     val currentSession by viewModel.currentSession.collectAsStateWithLifecycle()
@@ -88,6 +96,15 @@ fun PatchListScreen(
     var sessionFilterId by remember { mutableStateOf<Long?>(null) }
     var sessionFilterTouched by remember { mutableStateOf(false) }
     var pendingDelete by remember { mutableStateOf<PatchEventGroup?>(null) }
+    var selectionMode by remember { mutableStateOf(false) }
+    var selectedEventIds by remember { mutableStateOf<Set<Long>>(emptySet()) }
+
+    fun exitSelection() {
+        selectionMode = false
+        selectedEventIds = emptySet()
+    }
+
+    BackHandler(enabled = selectionMode) { exitSelection() }
 
     LaunchedEffect(currentSession) {
         if (!sessionFilterTouched) sessionFilterId = currentSession?.id
@@ -125,10 +142,45 @@ fun PatchListScreen(
     }
 
     Scaffold(
-        topBar = { BrandTopAppBar(title = "Patch Tracker") },
+        topBar = {
+            if (selectionMode) {
+                BrandTopAppBar(
+                    title = "${selectedEventIds.size} selected",
+                    navigationIcon = {
+                        IconButton(onClick = { exitSelection() }) {
+                            Icon(Icons.Filled.Close, contentDescription = "Cancel selection")
+                        }
+                    },
+                    actions = {
+                        IconButton(
+                            enabled = selectedEventIds.isNotEmpty(),
+                            onClick = {
+                                sharePatchAwards(context, groups.filter { it.eventId in selectedEventIds })
+                                exitSelection()
+                            }
+                        ) {
+                            Icon(Icons.Filled.Share, contentDescription = "Share selected awards")
+                        }
+                    }
+                )
+            } else {
+                BrandTopAppBar(
+                    title = "Patch Tracker",
+                    actions = {
+                        if (groups.isNotEmpty()) {
+                            IconButton(onClick = { selectionMode = true }) {
+                                Icon(Icons.Filled.Checklist, contentDescription = "Select awards to share")
+                            }
+                        }
+                    }
+                )
+            }
+        },
         floatingActionButton = {
-            FloatingActionButton(onClick = onAddClick) {
-                Icon(Icons.Filled.Add, contentDescription = "Add patch award")
+            if (!selectionMode) {
+                FloatingActionButton(onClick = onAddClick) {
+                    Icon(Icons.Filled.Add, contentDescription = "Add patch award")
+                }
             }
         }
     ) { innerPadding ->
@@ -166,9 +218,25 @@ fun PatchListScreen(
             } else {
                 LazyColumn(contentPadding = PaddingValues(bottom = 16.dp)) {
                     items(filtered, key = { it.eventId }) { group ->
+                        val selected = group.eventId in selectedEventIds
+                        fun toggle() {
+                            selectedEventIds =
+                                if (selected) selectedEventIds - group.eventId
+                                else selectedEventIds + group.eventId
+                        }
                         PatchEventRow(
                             group = group,
-                            onClick = { onEditClick(group.eventId) },
+                            selectionMode = selectionMode,
+                            selected = selected,
+                            onClick = {
+                                if (selectionMode) toggle() else onEditClick(group.eventId)
+                            },
+                            onLongClick = {
+                                if (!selectionMode) {
+                                    selectionMode = true
+                                    selectedEventIds = setOf(group.eventId)
+                                }
+                            },
                             onDeleteClick = { pendingDelete = group },
                             onMarkFulfilled = { lineId -> viewModel.markLineFulfilled(lineId) }
                         )
@@ -201,21 +269,29 @@ fun PatchListScreen(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun PatchEventRow(
     group: PatchEventGroup,
+    selectionMode: Boolean,
+    selected: Boolean,
     onClick: () -> Unit,
+    onLongClick: () -> Unit,
     onDeleteClick: () -> Unit,
     onMarkFulfilled: (Long) -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+            .background(if (selected) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        if (selectionMode) {
+            Checkbox(checked = selected, onCheckedChange = { onClick() })
+        }
         DateBadge(date = group.dateEarned)
 
         Column(modifier = Modifier.weight(1f)) {
@@ -245,7 +321,7 @@ private fun PatchEventRow(
                     )
                     Text(line.patchName, modifier = Modifier.weight(1f))
                     StatusBadge(awarded = !line.isOutstanding)
-                    if (line.isOutstanding && !group.sessionFinalized) {
+                    if (line.isOutstanding && !group.sessionFinalized && !selectionMode) {
                         TextButton(onClick = { onMarkFulfilled(line.lineId) }) { Text("Mark Fulfilled") }
                     }
                 }
@@ -264,7 +340,7 @@ private fun PatchEventRow(
             )
         }
 
-        if (!group.sessionFinalized) {
+        if (!group.sessionFinalized && !selectionMode) {
             IconButton(onClick = onDeleteClick) {
                 Icon(
                     Icons.Filled.Delete,
