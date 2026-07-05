@@ -131,6 +131,8 @@ fun PlayerEditScreen(
                     value = name,
                     onValueChange = { name = it },
                     label = { Text("Player Name") },
+                    isError = name.isBlank(),
+                    supportingText = { Text("Required") },
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
