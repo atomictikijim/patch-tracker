@@ -1,5 +1,7 @@
 package com.prolocity.patchtracker.ui.navigation
 
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
@@ -55,6 +57,11 @@ fun PatchTrackerNavHost(viewModel: PatchTrackerViewModel) {
     val currentRoute = backStackEntry?.destination
 
     Scaffold(
+        // Each routed screen hosts its own Scaffold + TopAppBar, so this outer Scaffold is only a
+        // NavigationBar host. Zeroing its content insets lets those inner app bars draw behind the
+        // status bar (the immersive edge-to-edge look) instead of this Scaffold reserving the top
+        // inset and pushing them below it. The NavigationBar still consumes the bottom inset itself.
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
             val isTopLevel = topLevelTabs.any { currentRoute?.hierarchy?.any { dest -> dest.route == it.route } == true }
             if (isTopLevel) {
@@ -85,7 +92,11 @@ fun PatchTrackerNavHost(viewModel: PatchTrackerViewModel) {
         NavHost(
             navController = navController,
             startDestination = Routes.PATCHES,
-            modifier = Modifier.padding(innerPadding)
+            // Offset content above the NavigationBar, then mark that space consumed so the inner
+            // screens' Scaffolds don't re-apply the bottom navigation-bar inset on top of it.
+            modifier = Modifier
+                .padding(innerPadding)
+                .consumeWindowInsets(innerPadding)
         ) {
             composable(Routes.PATCHES) {
                 PatchListScreen(
