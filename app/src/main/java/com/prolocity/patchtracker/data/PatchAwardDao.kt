@@ -19,6 +19,7 @@ interface PatchAwardDao {
                p.playerNumber AS playerNumber,
                s.id AS sessionId,
                s.name AS sessionName,
+               s.createdDate AS sessionCreatedDate,
                s.isFinalized AS sessionFinalized,
                e.division AS division,
                e.dateEarned AS dateEarned,
@@ -49,6 +50,7 @@ interface PatchAwardDao {
                p.playerNumber AS playerNumber,
                s.id AS sessionId,
                s.name AS sessionName,
+               s.createdDate AS sessionCreatedDate,
                s.isFinalized AS sessionFinalized,
                e.division AS division,
                e.dateEarned AS dateEarned,
@@ -87,24 +89,30 @@ interface PatchAwardDao {
 
     // Reassigns to :targetSessionId every event in :sessionId that still has at least one line,
     // carrying those (owed) awards into the target session. Events with no lines left are untouched.
+    // The earned date is capped to :maxDateEpochDay (dateEarned is stored as an epoch day) so every
+    // carried event predates the target session's creation — that earlier date is what marks a line
+    // as carried-over and excludes it from the target session's repeat-patch detection. In the normal
+    // case the original date is already earlier, so MIN leaves it untouched.
     @Query(
         """
         UPDATE patch_award_events
-        SET sessionId = :targetSessionId
+        SET sessionId = :targetSessionId,
+            dateEarned = MIN(dateEarned, :maxDateEpochDay)
         WHERE sessionId = :sessionId
           AND id IN (SELECT DISTINCT eventId FROM patch_award_lines)
         """
     )
-    suspend fun moveOwedEventsForSession(sessionId: Long, targetSessionId: Long)
+    suspend fun moveOwedEventsForSession(sessionId: Long, targetSessionId: Long, maxDateEpochDay: Long)
 
     // Finalize cleanup for a session being exported: drop its awarded lines, carry the events that
     // still hold owed lines into the target (current) session, then delete whatever events remain in
     // the source (now line-less, all-awarded entries). One transaction so a reader never sees a
-    // half-moved state.
+    // half-moved state. targetCreatedEpochDay is the target session's creation date (epoch day); the
+    // carried events are dated the day before it so they read as owed-from-a-prior-session.
     @Transaction
-    suspend fun finalizeCarryingOwed(sessionId: Long, targetSessionId: Long) {
+    suspend fun finalizeCarryingOwed(sessionId: Long, targetSessionId: Long, targetCreatedEpochDay: Long) {
         deleteAwardedLinesForSession(sessionId)
-        moveOwedEventsForSession(sessionId, targetSessionId)
+        moveOwedEventsForSession(sessionId, targetSessionId, targetCreatedEpochDay - 1)
         deleteEventsForSession(sessionId)
     }
 

@@ -86,10 +86,13 @@ fun SessionReviewScreen(
                 // patch type more than once in the same division. First award (earliest date) is
                 // unflagged; later ones are marked. Same patch in a different division is separate.
                 // Keyed by (award index, patch index) since the backup carries no line/event ids.
-                val repeatRefs = remember(backup.awards) {
+                // Owed patches carried in from a prior session (earned before this session was
+                // created) are excluded — they neither get flagged nor flag a new same-session award.
+                val repeatRefs = remember(backup.awards, backup.createdDate) {
                     backup.awards
                         .flatMapIndexed { ai, award ->
-                            award.patches.mapIndexed { pi, patch ->
+                            if (award.dateEarned.isBefore(backup.createdDate)) emptyList()
+                            else award.patches.mapIndexed { pi, patch ->
                                 Triple(ai to pi, award.dateEarned, listOf(award.playerNumber, award.division, patch.name))
                             }
                         }

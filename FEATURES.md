@@ -1,6 +1,6 @@
 # Patch Tracker — Feature Guide
 
-Version 0.1.8 · last updated 2026-07-09
+Version 0.1.8 · last updated 2026-07-10
 
 Patch Tracker is an Android app for a local APA (American Poolplayers Association)
 pool league. It keeps track of which patches each player has earned, whether the
@@ -94,6 +94,12 @@ If a player earns the **same patch again in the same session and division**, the
 later award is flagged with a gold **Repeat** badge, so a duplicate stands out at
 a glance. Earning the same patch in a *different* division counts as a fresh
 award, not a repeat.
+
+Owed patches that were **carried over from a previous session** (see "Exporting
+finalizes a session" below) don't count toward repeats in the session they land
+in: they're never flagged themselves, and they don't turn a genuinely-new award
+of the same patch into a repeat. Only patches actually earned in the current
+session are compared against each other.
 
 ### Sharing awards
 
@@ -230,8 +236,11 @@ When you export/finalize a session, the app tidies up its patches automatically:
   since marked fulfilled) are **cleared** — they've served their purpose, and the
   backup you just saved keeps the full record.
 - **Patches still owed** **carry over to the current session**, so the league
-  doesn't lose track of what it still owes players. They appear there as Owed, on
-  the day they were originally earned, ready to Mark Fulfilled when handed over.
+  doesn't lose track of what it still owes players. They appear there as Owed,
+  dated before the current session started (the day they were originally earned),
+  ready to Mark Fulfilled when handed over. Because they're dated earlier, they're
+  treated as leftovers from before and don't count toward Repeat flagging in the
+  session they carry into (see "Repeat awards" above).
 
 Because owed patches move into the **current** session, you export the *old*
 session **after** you've started the next one. If you try to export the session

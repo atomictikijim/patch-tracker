@@ -130,8 +130,11 @@ fun PatchListScreen(
     // division) is the first award; every later one is flagged. Same patch in a different division
     // is a separate first award, so division is part of the key. Computed across all award lines
     // (not just within one event) so repeats spanning separate award entries are caught too.
+    // Owed patches carried in from a prior session are excluded entirely: they don't get flagged and
+    // don't count as a prior award that would flag a genuinely-new one earned this session.
     val repeatLineIds = remember(patchAwards) {
         patchAwards
+            .filterNot { it.isCarriedOver }
             .groupBy { listOf(it.playerId, it.patchTypeId, it.sessionId, it.division) }
             .flatMap { (_, lines) ->
                 lines

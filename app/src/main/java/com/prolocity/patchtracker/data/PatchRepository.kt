@@ -207,9 +207,11 @@ class PatchRepository(
     suspend fun markSessionFinalized(id: Long) = sessionDao.markFinalized(id)
 
     // Finalize a session on export while carrying its still-owed patches into the target (current)
-    // session: awarded patches are cleared, owed ones move forward, then the session is locked.
+    // session: awarded patches are cleared, owed ones move forward (dated before the target session's
+    // creation so they don't count as repeats there), then the session is locked.
     suspend fun finalizeSessionCarryingOwed(sessionId: Long, targetSessionId: Long) {
-        patchAwardDao.finalizeCarryingOwed(sessionId, targetSessionId)
+        val target = sessionDao.getById(targetSessionId) ?: return
+        patchAwardDao.finalizeCarryingOwed(sessionId, targetSessionId, target.createdDate.toEpochDay())
         sessionDao.markFinalized(sessionId)
     }
 
