@@ -1,6 +1,6 @@
 # Patch Tracker — Feature Guide
 
-Version 0.1.8 · last updated 2026-07-10
+Version 0.1.9 · last updated 2026-07-10
 
 Patch Tracker is an Android app for a local APA (American Poolplayers Association)
 pool league. It keeps track of which patches each player has earned, whether the
