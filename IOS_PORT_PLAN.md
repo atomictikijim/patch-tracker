@@ -3,6 +3,12 @@
 An implementation plan for a native iOS version of Patch Tracker that runs on both
 iPhone and iPad. Companion to the Android app documented in `CLAUDE.md` / `FEATURES.md`.
 
+**Parity target: Android v0.1.8.** This plan tracks the Android app as of v0.1.8. Features
+added after the initial plan (and where they land below): **pick a photo from the library**
+in addition to the camera (Phase 4), the **enriched share summary** — player name + team +
+"(repeat)", no player number (Phase 4), and **owed-patch carry-forward when a session is
+finalized** (Phase 5). Keep this line current when the Android app gains user-visible behavior.
+
 ## Locked decisions
 
 - **Approach:** Native rewrite in **Swift + SwiftUI + SwiftData**. No cross-build
@@ -31,6 +37,7 @@ auth. All state is a local SQLite DB plus app-private JPEGs. This is therefore a
 | Material icons | SF Symbols (remap the 25-icon table) |
 | Material3 "league-blue" theme | Custom SwiftUI `Color` set, light + dark |
 | Camera via FileProvider intent | `UIImagePickerController` (camera) wrapped for SwiftUI |
+| Photo-library picker (`ActivityResultContracts.PickVisualMedia`, no permission) | SwiftUI `PhotosPicker` (PhotosUI) — no permission prompt, like Android's system photo picker |
 | Storage Access Framework file picker | `.fileImporter` / `.fileExporter` |
 | `java.util.zip` | ZIPFoundation (Swift Package Manager) |
 | `org.json` | `Codable` |
@@ -97,13 +104,30 @@ line, photo), player, team (8-slot roster with one-team-per-division enforcement
 custom patch type. View/edit-mode screens for player & team matching Android behavior.
 
 **Phase 4 — Platform integrations (~3–4 days)**
-Camera → sandbox-relative photo storage; CSV import (players + teams importers with the
-exact validation rules and a result summary); interdependent list filters; repeat-award
-detection; share sheet + clipboard summary.
+Photo capture **and** library pick → sandbox-relative photo storage: a patch award offers
+both **Take Photo** (camera) and **Choose from Device** (`PhotosPicker`, no permission
+prompt); the picked image is copied into app-private storage so it's stored the same relative
+way as a captured photo (never referenced by the transient picker URL). (Matches Android
+v0.1.8, where "Choose from Device" is on patch awards only — the custom patch-type photo is
+still camera-only; the same picker helper is ready to reuse there if wanted later.) CSV import (players + teams importers with the exact validation rules and a
+result summary); interdependent list filters; repeat-award detection; share sheet +
+clipboard summary. The share summary matches Android v0.1.8: one line per award of
+`"{player name} ({team}) — {patch}, {patch} (repeat)"` — the **team** is the one the player
+is on for that award's division (bare name if none), the player **number is omitted**, and a
+patch the player earned earlier in the same session+division is tagged `(repeat)` (reuse the
+repeat-detection set, don't recompute). Photos ride along as share images.
 
 **Phase 5 — Sessions & backup (~2–3 days)**
 Session lifecycle (current / finalize / lock); clear-session-awards; `.zip` export +
-import via ZIPFoundation (JSON + photos); read-only review screen.
+import via ZIPFoundation (JSON + photos); read-only review screen. **Finalize-on-export
+carry-forward (Android v0.1.8):** exporting a session writes the backup first, then, in one
+transaction, **clears its already-awarded lines** (`awardedAtTime` or since-fulfilled),
+**carries its still-owed lines into the current session** (move the whole event, keeping its
+date/division/photo, dropping only the awarded lines from mixed events; delete the emptied
+all-awarded events), and finally marks the session finalized. Owed patches move into the
+**current** session, so export the *old* session after the next one is current — if the
+session being exported is itself current (nowhere to carry to), **block export** with a
+"start the next session first" prompt and change nothing.
 
 **Phase 6 — Help, polish, QA (~2–3 days)**
 Bundle & render `FEATURES.md` per screen; empty states; iPad layout pass; light/dark;
@@ -117,7 +141,11 @@ VoiceOver + Dynamic Type; device testing on both idioms.
 - CSV team import: 3-digit division, ≤8 players, one-team-per-division, duplicate-team skip.
 - Interdependent filters (each dropdown narrows the others' options).
 - Repeat-award detection (same patch + same session + same division → "Repeat" badge).
-- Session finalize/lock rules (finalized awards locked; current session never deletable).
+- Share summary composition (name + team-for-division + patches, `(repeat)` tag, no player
+  number) — see Phase 4.
+- Session finalize/lock rules (finalized awards locked; current session never deletable) **and
+  finalize-on-export carry-forward** (clear awarded, carry owed to the current session, block
+  when the session being exported is itself current) — see Phase 5.
 
 ## Open follow-ups (not blocking, decide during the build)
 
