@@ -6,6 +6,7 @@ import android.content.Context
 import android.net.Uri
 import android.widget.Toast
 import androidx.core.app.ShareCompat
+import com.prolocity.patchtracker.data.TeamWithMembers
 import com.prolocity.patchtracker.ui.components.patchPhotoUriFor
 import java.io.File
 
@@ -18,10 +19,15 @@ import java.io.File
  * player/patch summary is copied to the clipboard for the user to paste as the caption while the
  * raw award photos ride along as the shared images.
  */
-internal fun sharePatchAwards(context: Context, groups: List<PatchEventGroup>) {
+internal fun sharePatchAwards(
+    context: Context,
+    groups: List<PatchEventGroup>,
+    teams: List<TeamWithMembers>,
+    repeatLineIds: Set<Long>
+) {
     if (groups.isEmpty()) return
 
-    val summary = buildSummary(groups)
+    val summary = buildSummary(groups, teams, repeatLineIds)
 
     // Copy the summary so the user can paste it as the Facebook caption (Facebook drops the
     // intent's pre-filled text for image shares).
@@ -53,10 +59,27 @@ internal fun sharePatchAwards(context: Context, groups: List<PatchEventGroup>) {
     ).show()
 }
 
-private fun buildSummary(groups: List<PatchEventGroup>): String {
+private fun buildSummary(
+    groups: List<PatchEventGroup>,
+    teams: List<TeamWithMembers>,
+    repeatLineIds: Set<Long>
+): String {
     val lines = groups.map { group ->
-        val patches = group.lines.map { it.patchName }.distinct().joinToString(", ")
-        "${group.playerName} (#${group.playerNumber}) — $patches"
+        // Each patch, deduped by name; a patch the player has earned before this session+division
+        // is flagged "(repeat)" (matches the in-list Repeat badge, computed from repeatLineIds).
+        val patches = group.lines
+            .distinctBy { it.patchName }
+            .joinToString(", ") { line ->
+                if (line.lineId in repeatLineIds) "${line.patchName} (repeat)" else line.patchName
+            }
+        // The team the player is on for this award's division (one team per player per division),
+        // added in parentheses after their name. Awards with no division / no matching team just
+        // show the name.
+        val teamName = teams.firstOrNull { tw ->
+            tw.team.division == group.division && tw.members.any { it.id == group.playerId }
+        }?.team?.name
+        val who = if (teamName.isNullOrBlank()) group.playerName else "${group.playerName} ($teamName)"
+        "$who — $patches"
     }
     return buildString {
         append("Patch awards! 🎉")

@@ -229,3 +229,19 @@ Add an entry whenever:
 **Verified on device:** picker launches from "Choose from Device", a selected photo copies in and renders as the form thumbnail, and the action row switches to Retake/Choose/Remove.
 
 **Related metadata:** `ui/components/PatchPhotos.kt` (`copyUriToPatchPhotoFile`), `ui/patches/PatchEditScreen.kt` (gallery launcher + button).
+
+---
+
+## 2026-07-09 — Richer share-summary text (team + repeat; drop player number)
+
+**Change:** The clipboard/share summary produced by `sharePatchAwards` (Patches list selection → Share) was `"{name} (#{number}) — {patches}"` per award. Reworked per request to: keep the player **name**, **drop the player number**, add the **team** the player is on for that award's division in parentheses, and mark any **repeat** patch. New per-line shape: `"{name} ({team}) — {patch}, {patch} (repeat)"`. Header "Patch awards! 🎉" unchanged.
+
+**Where the data comes from:**
+- **Team** — `sharePatchAwards` now takes the app's `List<TeamWithMembers>` (already collected in `PatchListScreen`). The team is `teams.firstOrNull { it.team.division == group.division && it.members.any { m -> m.id == group.playerId } }`. Relies on the existing one-team-per-player-per-division rule, so `firstOrNull` is unambiguous. Awards with "No division" (or a division the player has no team in) just show the bare name — no parens.
+- **Repeat** — reused the list screen's existing `repeatLineIds: Set<Long>` (same set that drives the in-list gold "Repeat" badge — a line is a repeat if the player earned that patch type earlier in the same session+division). Passed into `sharePatchAwards` rather than recomputed, so the share text and the badge can never disagree. Patches are deduped by name (`distinctBy`) for display, matching the prior behavior; the retained line's repeat flag decides the "(repeat)" suffix.
+
+**Verified on device (end-to-end):** selected two Div-682 awards (one flagged Repeat, one not), tapped Share, and read the copied clipboard text back via the keyboard clipboard strip + a `uiautomator dump` after pasting into a field. Output exactly: `Ariel Lopez (Storm Breakers) — 8-Ball Clean Sweep` / `Damian Aviles (ShotCallers) — 8-Ball Clean Sweep (repeat)` — number gone, team present, repeat only on the repeat line.
+
+**Aside — the Patches list rendered empty despite 56 events in the DB.** Root cause: a large uncheckpointed WAL (~424 KB) that the running app couldn't fold in — logcat showed `avc: denied { ioctl } … patch_tracker.db … permissive=0` (SELinux blocking SQLite's WAL ioctl on this Samsung device). Reloading via `testdata/load_test_data.sh` (which checkpoints, `VACUUM`s, and pushes a single-file db, dropping the WAL) made all data show. Not an app bug — a device/test-data-handling artifact — but noted here since it wasted time and will recur when a big WAL is left behind by a prior debug session.
+
+**Related metadata:** `ui/patches/SharePatchAwards.kt` (`sharePatchAwards`/`buildSummary` signatures + logic), `ui/patches/PatchListScreen.kt` (collects `teams`, passes `teams` + `repeatLineIds` to the share call).

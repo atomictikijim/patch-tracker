@@ -99,10 +99,17 @@ award, not a repeat.
 
 The Patches list has a **selection mode** (the checklist icon in the top bar, or
 long-press a row). Pick several awards and share them out through the phone's
-normal share sheet. The award photos are attached as images, and a summary of the
-player names and patches is copied to your clipboard so you can paste it as the
-caption. (Posting to the league's Facebook group is the final manual step — pick
-the group in the share sheet and paste the caption.)
+normal share sheet. The award photos are attached as images, and a summary is
+copied to your clipboard so you can paste it as the caption. Each summary line
+shows the **player's name and their team** (the team they're on in that award's
+division), followed by the patches — and a patch the player has earned before in
+the same session and division is marked **(repeat)**. For example:
+
+> Ariel Lopez (Storm Breakers) — 8-Ball Clean Sweep
+> Damian Aviles (ShotCallers) — 8-Ball Clean Sweep (repeat)
+
+(Posting to the league's Facebook group is the final manual step — pick the group
+in the share sheet and paste the caption.)
 
 ### Locked awards
 

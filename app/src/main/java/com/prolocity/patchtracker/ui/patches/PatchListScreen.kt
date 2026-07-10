@@ -94,6 +94,7 @@ fun PatchListScreen(
     val patchAwards by viewModel.patchAwards.collectAsStateWithLifecycle()
     val sessions by viewModel.sessions.collectAsStateWithLifecycle()
     val currentSession by viewModel.currentSession.collectAsStateWithLifecycle()
+    val teams by viewModel.teams.collectAsStateWithLifecycle()
     var filter by remember { mutableStateOf(StatusFilter.ALL) }
     var sessionFilterId by remember { mutableStateOf<Long?>(null) }
     var sessionFilterTouched by remember { mutableStateOf(false) }
@@ -224,7 +225,7 @@ fun PatchListScreen(
                         IconButton(
                             enabled = selectedEventIds.isNotEmpty(),
                             onClick = {
-                                sharePatchAwards(context, groups.filter { it.eventId in selectedEventIds })
+                                sharePatchAwards(context, groups.filter { it.eventId in selectedEventIds }, teams, repeatLineIds)
                                 exitSelection()
                             }
                         ) {
