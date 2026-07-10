@@ -40,6 +40,10 @@ The Android app itself has **no pending action** — pick from "Suggested next s
 
 ## Log
 
+### 2026-07-09
+
+- **"Choose from Device" for patch-award photos.** Task: add picking an existing photo alongside the camera when attaching a photo to a patch award. Added a second button in `PatchEditScreen`'s Photo section wired to `ActivityResultContracts.PickVisualMedia()` (Android system Photo Picker — no storage permission, image-only). A new `copyUriToPatchPhotoFile()` helper in `PatchPhotos.kt` copies the picked content-URI's bytes into an app-private `patch_photos/*.jpg` so the existing absolute-path storage model is unchanged (the DB never sees a transient gallery URI). Verified end-to-end on a physical device: picker launches, selected image copies in and renders as the thumbnail, buttons switch to Retake/Choose/Remove. `FEATURES.md` updated. Scoped to patch awards only (not the custom-patch-type dialog, which the request didn't cover). See NOTES.md 2026-07-09.
+
 ### 2026-07-05
 
 - **Edge-to-edge modernization for Android 14+.** Task: "optimize the app for Android OS 14 and up." Kept `minSdk 26` (no devices dropped) and focused on modern edge-to-edge UI. Made the app truly immersive: the outer NavHost `Scaffold` now uses `contentWindowInsets = WindowInsets(0)` + `.consumeWindowInsets(innerPadding)` so each screen's own `TopAppBar` draws *behind* the status bar (previously the outer Scaffold reserved the top inset, leaving the bar below it) while the bottom `NavigationBar` inset isn't double-applied. Set the status-bar icon tint theme-inverted (light icons in light theme, dark in dark theme) to contrast with the league-blue app bar, whose color flips by theme — done via a `DisposableEffect(darkTheme)` in `setContent`. Opted into the predictive back gesture (`android:enableOnBackInvokedCallback="true"`). Verified on a physical device in both light and dark themes (list + edit screens, back nav). No FEATURES.md change (system-chrome polish, not a documented feature). See NOTES.md 2026-07-05.

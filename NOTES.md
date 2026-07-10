@@ -213,3 +213,19 @@ Add an entry whenever:
 3. **Predictive back gesture** — opted in with `android:enableOnBackInvokedCallback="true"` on `<application>` (Android 13+/14 system back animation; supported by Navigation-Compose 2.8.x and the `BackHandler` used in the Patches selection mode).
 **Verified on device (physical, both themes):** dark mode — light-blue bar bleeds under the status bar with readable dark status icons; light mode — dark-blue bar with readable light status icons. Edit screen (Add Patch Award) app bar draws behind the status bar, content starts below it, form clears the gesture bar, back returns to the list cleanly. No FEATURES.md change — this is system-chrome presentation polish, not a documented user feature.
 **Related metadata:** `MainActivity.kt` (theme-reactive `enableEdgeToEdge`), `ui/navigation/PatchTrackerNavHost.kt` (`contentWindowInsets = WindowInsets(0)` + `consumeWindowInsets`), `AndroidManifest.xml` (`enableOnBackInvokedCallback`).
+
+---
+
+## 2026-07-09 — "Choose from Device" option for patch-award photos
+
+**Change:** Patch-award photos could previously only be captured with the camera (`ActivityResultContracts.TakePicture()`). Added a "Choose from Device" option so a league rep can attach a photo already in the gallery (e.g. one taken earlier, or received in a group chat).
+
+**Decision — system Photo Picker, not a permission-gated gallery intent.** Used `ActivityResultContracts.PickVisualMedia()` (image-only) rather than `GetContent`/`OpenDocument` or a `READ_MEDIA_IMAGES`-gated `MediaStore` query. The Photo Picker needs **no runtime permission** (it runs out-of-process and returns only the single URI the user taps — see the "will only have access to the photos you select" banner), which keeps the manifest clean and is Google's recommended API on modern Android. activity-compose is already 1.9.3, so it's available with no new dependency.
+
+**Decision — copy the picked bytes into app-private storage immediately.** The rest of the app stores photos as an *absolute file path* to a JPEG under `filesDir/patch_photos/` (see the 2026 photo plumbing in `PatchPhotos.kt`). A picker content-URI is transient (revoked when the process dies) and isn't a file path, so `copyUriToPatchPhotoFile()` opens the URI via `contentResolver` and copies it into a fresh `patch_photos/*.jpg` — reusing `createPatchPhotoFile()`. This keeps the DB column semantics identical to the camera path (an owned absolute path) with zero changes downstream (Coil, share/export, delete). Returns null on unreadable source (guarded with `runCatching`), leaving the existing photo untouched.
+
+**Scope:** Patch awards only. The custom-patch-type dialog (`PatchTypeFormDialog`) still offers camera-only — the request was specific to patch awards, and that helper is a small, separate flow; the same `copyUriToPatchPhotoFile()` helper is ready to reuse there if wanted later.
+
+**Verified on device:** picker launches from "Choose from Device", a selected photo copies in and renders as the form thumbnail, and the action row switches to Retake/Choose/Remove.
+
+**Related metadata:** `ui/components/PatchPhotos.kt` (`copyUriToPatchPhotoFile`), `ui/patches/PatchEditScreen.kt` (gallery launcher + button).

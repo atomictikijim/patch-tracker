@@ -1,6 +1,7 @@
 package com.prolocity.patchtracker.ui.patches
 
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -61,6 +62,7 @@ import com.prolocity.patchtracker.ui.components.PatchTypeIcon
 import com.prolocity.patchtracker.ui.components.PlayerLookupField
 import com.prolocity.patchtracker.ui.components.SaveButton
 import com.prolocity.patchtracker.ui.components.SectionLabel
+import com.prolocity.patchtracker.ui.components.copyUriToPatchPhotoFile
 import com.prolocity.patchtracker.ui.components.createPatchPhotoFile
 import com.prolocity.patchtracker.ui.components.patchPhotoUriFor
 import com.prolocity.patchtracker.ui.navigation.Routes
@@ -120,6 +122,11 @@ fun PatchEditScreen(
 
     val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
         if (success) photoPath = pendingPhotoPath
+    }
+    val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) {
+            copyUriToPatchPhotoFile(context, uri)?.let { photoPath = it.absolutePath }
+        }
     }
 
     LaunchedEffect(patchAwardId) {
@@ -375,6 +382,11 @@ fun PatchEditScreen(
                             pendingPhotoPath = file.absolutePath
                             cameraLauncher.launch(patchPhotoUriFor(context, file))
                         }) { Text(if (photoPath == null) "Take Photo" else "Retake Photo") }
+                        TextButton(onClick = {
+                            galleryLauncher.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                            )
+                        }) { Text("Choose from Device") }
                         if (photoPath != null) {
                             TextButton(onClick = { photoPath = null }) { Text("Remove Photo") }
                         }

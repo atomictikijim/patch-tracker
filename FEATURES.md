@@ -1,6 +1,6 @@
 # Patch Tracker — Feature Guide
 
-Version 0.1.7 · last updated 2026-07-05
+Version 0.1.7 · last updated 2026-07-09
 
 Patch Tracker is an Android app for a local APA (American Poolplayers Association)
 pool league. It keeps track of which patches each player has earned, whether the
@@ -70,7 +70,9 @@ characters. Pick one to select them.
   team (e.g. dropped from a lineup).
 - **+ Add Another Patch** adds another patch to the same entry; the trash icon on
   a patch row removes it (an entry always keeps at least one patch).
-- You can take or retake a **photo** of the player with their patches.
+- You can add a **photo** of the player with their patches — either **Take Photo**
+  with the camera or **Choose from Device** to pick an existing photo from your
+  gallery. Once added, you can retake/re-choose or remove it.
 
 Editing an existing award reopens the same form with everything pre-filled.
 
