@@ -52,6 +52,7 @@ fun SessionDetailScreen(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val patchAwards by viewModel.patchAwards.collectAsStateWithLifecycle()
+    val currentSession by viewModel.currentSession.collectAsStateWithLifecycle()
 
     var session by remember { mutableStateOf<Session?>(null) }
     var showRenameDialog by remember { mutableStateOf(false) }
@@ -59,6 +60,12 @@ fun SessionDetailScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showCantDeleteCurrentDialog by remember { mutableStateOf(false) }
     var showMustFinalizeDialog by remember { mutableStateOf(false) }
+    var showExportBlockedDialog by remember { mutableStateOf(false) }
+
+    // Exporting carries this session's still-owed patches into the current session. That needs a
+    // *different* current session to move them into — if this session is itself the current one (or
+    // there's no current session), export is blocked until the user starts/sets the next session.
+    val carryTarget = currentSession?.takeIf { it.id != sessionId }
 
     LaunchedEffect(sessionId) {
         session = viewModel.getSession(sessionId)
@@ -71,11 +78,18 @@ fun SessionDetailScreen(
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
         val current = session
         if (uri == null || current == null) return@rememberLauncherForActivityResult
+        val target = carryTarget
         coroutineScope.launch {
             val lines = viewModel.getSessionAwardLines(sessionId)
             val data = buildSessionBackupData(current, lines)
             context.contentResolver.openOutputStream(uri)?.use { writeSessionBackup(it, data) }
-            viewModel.markSessionFinalized(sessionId)
+            // Backup holds the full record (owed + awarded); now clear the awarded ones and carry the
+            // owed ones into the current session, then lock this session.
+            if (target != null) {
+                viewModel.finalizeSessionCarryingOwed(sessionId, target.id)
+            } else {
+                viewModel.markSessionFinalized(sessionId)
+            }
             session = current.copy(isFinalized = true)
         }
     }
@@ -135,8 +149,23 @@ fun SessionDetailScreen(
                 )
             }
 
+            if (!current.isFinalized) {
+                Text(
+                    text = "Exporting locks this session. Patches still owed carry over to the current " +
+                        "session; patches already awarded are cleared.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
             OutlinedButton(
-                onClick = { exportLauncher.launch("PatchTracker_${current.name}_${LocalDate.now()}.zip") },
+                onClick = {
+                    if (current.isFinalized || carryTarget != null) {
+                        exportLauncher.launch("PatchTracker_${current.name}_${LocalDate.now()}.zip")
+                    } else {
+                        showExportBlockedDialog = true
+                    }
+                },
                 modifier = Modifier.fillMaxWidth()
             ) { Text("Export Backup") }
 
@@ -188,6 +217,17 @@ fun SessionDetailScreen(
                 onBack()
             },
             onDismiss = { showDeleteDialog = false }
+        )
+    }
+
+    if (showExportBlockedDialog) {
+        ConfirmDialog(
+            title = "Start the next session first",
+            text = "This is the current session, so there's nowhere to carry its still-owed patches. " +
+                "Start a new session (or set another as current) first, then export this one.",
+            confirmLabel = "OK",
+            onConfirm = { showExportBlockedDialog = false },
+            onDismiss = { showExportBlockedDialog = false }
         )
     }
 

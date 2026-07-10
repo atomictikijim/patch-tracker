@@ -245,3 +245,21 @@ Add an entry whenever:
 **Aside — the Patches list rendered empty despite 56 events in the DB.** Root cause: a large uncheckpointed WAL (~424 KB) that the running app couldn't fold in — logcat showed `avc: denied { ioctl } … patch_tracker.db … permissive=0` (SELinux blocking SQLite's WAL ioctl on this Samsung device). Reloading via `testdata/load_test_data.sh` (which checkpoints, `VACUUM`s, and pushes a single-file db, dropping the WAL) made all data show. Not an app bug — a device/test-data-handling artifact — but noted here since it wasted time and will recur when a big WAL is left behind by a prior debug session.
 
 **Related metadata:** `ui/patches/SharePatchAwards.kt` (`sharePatchAwards`/`buildSummary` signatures + logic), `ui/patches/PatchListScreen.kt` (collects `teams`, passes `teams` + `repeatLineIds` to the share call).
+
+---
+
+## 2026-07-09 — Finalize-on-export carries owed patches forward, clears awarded
+
+**Change:** Requested behavior: when a session is finalized, patches still owed should persist to the next session; only the already-awarded ones should be cleared. Finalization happens on **Export** (the existing export = finalize flow), so the carry-over is folded into export.
+
+**Decisions (confirmed with the user):**
+- **Trigger = on Export/finalize** (not the separate "Clear Patches for This Session" button, which is left unchanged as the nuke-everything cleanup). After the backup is written, the session's awarded lines are deleted, its owed lines move to the current session, then it's marked finalized.
+- **Target = the current session; block if there isn't one.** Owed awards move into whatever session is marked current. Since owed patches move into the *current* session, you must export the *old* session after starting the next one. If the session being exported is itself the current session (nowhere to carry to), the Export button shows a "Start the next session first" dialog and does nothing — chosen over auto-creating a continuation session to keep session creation an explicit user act.
+
+**What counts as "owed" vs "awarded":** owed = `isOutstanding` = `!awardedAtTime && fulfilledDate == null` (the same rule behind the Owed badge). Awarded (cleared) = the complement: handed over at the time, OR an owed patch since fulfilled.
+
+**Mixed events:** a `PatchAwardEvent` can hold both awarded and owed lines. The cleanup is line-level: `deleteAwardedLinesForSession` drops the awarded lines, then `moveOwedEventsForSession` reassigns to the target session every event that still has ≥1 line (carrying the whole event — preserving its original `dateEarned`/division/photo — with only its owed lines), then `deleteEventsForSession` deletes the now-empty (all-awarded) events left behind. All three run in one `@Transaction` (`PatchAwardDao.finalizeCarryingOwed`). Repository (`finalizeSessionCarryingOwed`) then calls `sessionDao.markFinalized` after the award mutation; the backup was already written before any of this, so the exported `.zip` preserves the complete pre-clear record. No schema change — only new queries and row moves/deletes.
+
+**Verified on device (end-to-end):** with "Lake & Osceola Summer 2026" current (32 owed + 27 awarded lines across 56 events): exporting it while current → blocked with the "Start the next session first" dialog. Started "Fall2026" (now current), exported the old session → old session finalized with 0 entries; Fall2026 gained exactly the 30 events / 32 owed lines (0 awarded), shown as editable Owed on their original Jul-7 dates, Repeat badge still correct. DB counts reconciled (26 all-awarded events deleted, 30 owed-bearing events moved, 27 awarded lines cleared). Restored baseline test data afterward via `load_test_data.sh`.
+
+**Related metadata:** `data/PatchAwardDao.kt` (`deleteAwardedLinesForSession`, `moveOwedEventsForSession`, `finalizeCarryingOwed`), `data/PatchRepository.kt` (`finalizeSessionCarryingOwed`), `ui/PatchTrackerViewModel.kt` (+wrapper), `ui/sessions/SessionDetailScreen.kt` (carry-target guard, blocked-export dialog, export-callback carry-over, explanatory caption).

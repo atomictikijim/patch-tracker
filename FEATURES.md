@@ -216,13 +216,27 @@ The Sessions tab lets you:
 - **Review a backup** — reopen a previously exported `.zip` read-only, without
   touching the live data.
 
-### Exporting finalizes a session
+### Exporting finalizes a session and carries owed patches forward
 
 Exporting a session also **finalizes** it. A finalized session's awards are locked
 from any further add/edit/delete, and it drops out of the session picker when
 adding new awards. Finalizing is also the only way to unlock **deleting** a
 session — **except the current session, which can never be deleted**, finalized
 or not.
+
+When you export/finalize a session, the app tidies up its patches automatically:
+
+- **Patches already awarded** (handed over on the spot, or an owed patch you've
+  since marked fulfilled) are **cleared** — they've served their purpose, and the
+  backup you just saved keeps the full record.
+- **Patches still owed** **carry over to the current session**, so the league
+  doesn't lose track of what it still owes players. They appear there as Owed, on
+  the day they were originally earned, ready to Mark Fulfilled when handed over.
+
+Because owed patches move into the **current** session, you export the *old*
+session **after** you've started the next one. If you try to export the session
+that's still marked current, the app stops you with a reminder to start (or set)
+the next session first — otherwise the owed patches would have nowhere to go.
 
 ---
 

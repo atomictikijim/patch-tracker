@@ -74,6 +74,40 @@ interface PatchAwardDao {
     @Query("DELETE FROM patch_award_events WHERE sessionId = :sessionId")
     suspend fun deleteEventsForSession(sessionId: Long)
 
+    // Deletes the "awarded" (handed-over) lines of a session: those NOT still outstanding, i.e.
+    // awarded at the time OR since fulfilled. Owed-and-unfulfilled lines are left in place.
+    @Query(
+        """
+        DELETE FROM patch_award_lines
+        WHERE eventId IN (SELECT id FROM patch_award_events WHERE sessionId = :sessionId)
+          AND (awardedAtTime = 1 OR fulfilledDate IS NOT NULL)
+        """
+    )
+    suspend fun deleteAwardedLinesForSession(sessionId: Long)
+
+    // Reassigns to :targetSessionId every event in :sessionId that still has at least one line,
+    // carrying those (owed) awards into the target session. Events with no lines left are untouched.
+    @Query(
+        """
+        UPDATE patch_award_events
+        SET sessionId = :targetSessionId
+        WHERE sessionId = :sessionId
+          AND id IN (SELECT DISTINCT eventId FROM patch_award_lines)
+        """
+    )
+    suspend fun moveOwedEventsForSession(sessionId: Long, targetSessionId: Long)
+
+    // Finalize cleanup for a session being exported: drop its awarded lines, carry the events that
+    // still hold owed lines into the target (current) session, then delete whatever events remain in
+    // the source (now line-less, all-awarded entries). One transaction so a reader never sees a
+    // half-moved state.
+    @Transaction
+    suspend fun finalizeCarryingOwed(sessionId: Long, targetSessionId: Long) {
+        deleteAwardedLinesForSession(sessionId)
+        moveOwedEventsForSession(sessionId, targetSessionId)
+        deleteEventsForSession(sessionId)
+    }
+
     @Query("SELECT * FROM patch_award_events WHERE id = :id")
     suspend fun getEventById(id: Long): PatchAwardEvent?
 
