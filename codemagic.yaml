@@ -1,0 +1,102 @@
+definitions:
+  environment:
+    android_home: $ANDROID_HOME
+    java_home: $JAVA_HOME
+    gradle_props: "-Dorg.gradle.jvmargs=-Xmx3072m -Dorg.gradle.parallel=true -Dorg.gradle.daemon=true"
+
+workflows:
+  debug-build:
+    name: Debug Build
+    instance_type: linux_default
+    environment:
+      android_sdk: "35"
+      java: java17
+      gradle: "8.7.3"
+    triggering:
+      events:
+        - pull_request
+        - push
+      branch:
+        include_patterns:
+          - main
+          - develop
+    scripts:
+      - name: Build debug APK
+        script: |
+          ./gradlew.bat :app:assembleDebug $gradle_props
+      - name: Run unit tests
+        script: |
+          ./gradlew.bat :app:testDebugUnitTest $gradle_props
+    artifacts:
+      - app/build/outputs/apk/debug/app-debug.apk
+      - app/build/reports/tests/**
+    publishing:
+      email:
+        enabled: true
+        recipients:
+          - james.milne@prolocity.com
+      slack:
+        enabled: false
+
+  release-build:
+    name: Release Build
+    instance_type: linux_default
+    environment:
+      android_sdk: "35"
+      java: java17
+      gradle: "8.7.3"
+    triggering:
+      events:
+        - tag
+      tag:
+        pattern: 'v\d+\.\d+\.\d+'
+    scripts:
+      - name: Build release APK
+        script: |
+          # Create keystore.properties from environment variables if present
+          if [ ! -z "$KEYSTORE_PATH" ] && [ ! -z "$KEYSTORE_PASSWORD" ] && [ ! -z "$KEY_ALIAS" ] && [ ! -z "$KEY_PASSWORD" ]; then
+            echo "storeFile=$KEYSTORE_PATH" > keystore.properties
+            echo "storePassword=$KEYSTORE_PASSWORD" >> keystore.properties
+            echo "keyAlias=$KEY_ALIAS" >> keystore.properties
+            echo "keyPassword=$KEY_PASSWORD" >> keystore.properties
+          fi
+          ./gradlew.bat :app:assembleRelease $gradle_props
+      - name: Run unit tests
+        script: |
+          ./gradlew.bat :app:testReleaseUnitTest $gradle_props
+    artifacts:
+      - app/build/outputs/apk/release/app-release.apk
+      - app/build/reports/tests/**
+    publishing:
+      email:
+        enabled: true
+        recipients:
+          - james.milne@prolocity.com
+      slack:
+        enabled: false
+
+  instrumented-tests:
+    name: Instrumented Tests
+    instance_type: linux_default
+    environment:
+      android_sdk: "35"
+      java: java17
+      gradle: "8.7.3"
+    triggering:
+      events:
+        - pull_request
+      branch:
+        include_patterns:
+          - main
+    scripts:
+      - name: Compile for instrumented tests
+        script: |
+          ./gradlew.bat :app:compileDebugAndroidTestKotlin $gradle_props
+      - name: Build instrumented test APK
+        script: |
+          ./gradlew.bat :app:assembleDebugAndroidTest $gradle_props
+    artifacts:
+      - app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+    publishing:
+      email:
+        enabled: false
