@@ -30,3 +30,4 @@ app/release/
 # Release signing secrets — NEVER commit. Keep a backup; the same key must sign every update.
 /keystore.properties
 /keystore/
+.kotlin/
