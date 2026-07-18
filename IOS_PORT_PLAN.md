@@ -203,7 +203,7 @@ Connect API key, `.ipa` build, TestFlight upload. This is the first phase gated 
 Apple Developer Program enrollment being complete.
 
 **Phase 6 — Help, polish, QA (~2–3 days, plus real-device time this app has never had) —
-written 2026-07-18, pending `ios-ci` verification**
+done, `ios-ci` green 2026-07-18**
 Bundle & render `FEATURES.md` per screen; empty states; iPad layout pass; light/dark;
 VoiceOver + Dynamic Type; device testing on both idioms via TestFlight installs (no
 Mac to plug a device into — TestFlight is also the only way to get the app onto a
@@ -222,9 +222,10 @@ correctly in either a `NavigationStack` (push, iPhone) or a `NavigationSplitView
 (split, iPad) with no other code changes. Empty states were already in place from earlier phases
 (one `ContentUnavailableView` per list/filtered-empty state); the new split-view detail columns
 each get one too ("Select a Player/Team/Session"). Device testing itself remains blocked on the
-signed `ios-testflight` workflow (Apple Developer Program enrollment not started) — the layout
-change is structurally verified by `ios-ci`'s build step but not visually confirmed on an actual
-iPad, per this phase's own caveat above.
+signed `ios-testflight` workflow (Apple Developer Program enrollment not started). Build and
+`HelpContentTests` both came back green on the first `ios-ci` push, no fixes needed — but that
+only structurally verifies the layout (it compiles, tab-container branching resolves), not a
+visual/interaction confirmation on an actual iPad, per this phase's own caveat above.
 
 **Rough total: ~3–4 weeks of feature work for one iOS developer, plus CI round-trip
 overhead throughout** — the no-Mac constraint doesn't add phases, but it slows every
