@@ -9,6 +9,16 @@ workflows:
       events:
         - pull_request
         - push
+    when:
+      changeset:
+        includes:
+          - app/**
+          - build.gradle.kts
+          - settings.gradle.kts
+          - gradle.properties
+          - gradle/**
+          - gradlew
+          - gradlew.bat
     scripts:
       - name: Build debug APK
         script: |
