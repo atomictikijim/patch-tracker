@@ -52,12 +52,27 @@ PatchTracker/
   clear-and-reinsert roster on save), `PatchEditView` (multi-line award editor: player
   look-up, session/division menus, per-line patch-type picker with inline "+ Add new patch
   type", Awarded/Owed toggle + fulfilled date), and `NewPatchTypeView` (custom patch type by
-  name, wired into both the Patch Types tab and the patch-line picker). **Photo capture/picker
-  is deferred to Phase 4** as planned — patch awards and custom patch types have no photo UI
-  yet. No new automated test coverage (XCUITest isn't scaffolded yet); correctness rests on
-  `ios-ci` catching compile errors plus a manual pass once installable via TestFlight. One
-  real bug caught by `ios-ci` (not a Codemagic/config issue this time): a shadowed `let`
-  binding in `PlayerLookupField` that couldn't be reassigned — see `NOTES.md` 2026-07-18.
+  name, wired into both the Patch Types tab and the patch-line picker). One real bug caught by
+  `ios-ci`: a shadowed `let` binding in `PlayerLookupField` that couldn't be reassigned — see
+  `NOTES.md` 2026-07-18.
+- **Phase 4** — platform integrations (written 2026-07-18, pending its first `ios-ci` run):
+  `PhotoField` (shared component: thumbnail + Take/Retake Photo via the new
+  `CameraCaptureView` `UIImagePickerController` wrap, "Choose from Device" via `PhotosPicker`
+  when `allowsLibraryPick` is set, Remove Photo) wired into `PatchEditView` (both camera and
+  library, matching Android v0.1.8) and `NewPatchTypeView` (camera-only, matching Android's
+  custom-patch-type behavior); both write through the existing `PhotoStorage`. `CsvImport.swift`
+  ports the Android CSV parser and player/team import validation rules verbatim (same skip and
+  warning message strings), surfaced via `CsvImportResultView` and a new toolbar import button
+  on `PlayerListView`/`TeamListView` (`.fileImporter`, `.commaSeparatedText`/`.plainText`).
+  `PatchListView` gained a selection mode (long-press or the checklist toolbar button) and a
+  share action: copies a Facebook-caption-style summary to the clipboard and opens the system
+  share sheet with any selected awards' photos attached — interdependent filters and repeat-award
+  detection were already in place from Phase 2/3 so needed no new work here. New unit coverage:
+  `CsvImportTests` (parser edge cases — quoted fields, embedded quotes, BOM, CRLF, blank rows —
+  plus every player/team validation rule) since CSV import is exactly the kind of pure-logic
+  correctness the no-Mac workflow weights test coverage for. Still open: the signed
+  `ios-testflight` Codemagic workflow the plan calls for alongside Phase 4 is blocked on Apple
+  Developer Program enrollment, which hasn't been started yet.
 - **Compiled via Codemagic, not locally** — there is no Mac in this project's authoring
   environment at all, so the `ios-ci` workflow in `../codemagic.yaml` (macOS instance,
   `xcodegen generate` → build-for-simulator → `build-for-testing`/`test-without-building`)
@@ -70,5 +85,6 @@ PatchTracker/
   `GENERATE_INFOPLIST_FILE` on the test target) — see `NOTES.md`'s 2026-07-18 entry for
   the full trail if `ios-ci` breaks again in a similar way.
 
-Pending: **Phase 4** (camera/photo-picker, CSV import, share), Phase 5 (session backup),
-Phase 6 (help, polish, QA). See [`../IOS_PORT_PLAN.md`](../IOS_PORT_PLAN.md).
+Pending: Phase 4's signed `ios-testflight` workflow (needs Apple Developer Program
+enrollment), Phase 5 (session backup), Phase 6 (help, polish, QA). See
+[`../IOS_PORT_PLAN.md`](../IOS_PORT_PLAN.md).

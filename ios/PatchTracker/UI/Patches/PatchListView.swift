@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UIKit
 
 private enum StatusFilter: String, CaseIterable, Identifiable {
     case all = "All", awarded = "Awarded", owed = "Owed"
@@ -34,14 +35,22 @@ private enum PatchEditTarget: Identifiable {
     }
 }
 
+private struct ShareSheetTarget: Identifiable {
+    let id = UUID()
+    let items: [Any]
+}
+
 /// The main Patches screen: the award list grouped one row per event, with interdependent
 /// Session/Division/Date/Player filters, Awarded/Owed status filtering, the gold "Repeat" flag,
-/// per-line Mark Fulfilled, and swipe-to-delete. (Selection + share lands in the sharing phase.)
+/// per-line Mark Fulfilled, swipe-to-delete, and a selection-mode share (long-press or the
+/// checklist button) that copies a summary to the clipboard and shares it — with any award
+/// photos attached — through the system share sheet.
 struct PatchListView: View {
     @Environment(\.modelContext) private var context
     @Query(sort: [SortDescriptor(\PatchAwardEvent.dateEarned, order: .reverse)])
     private var events: [PatchAwardEvent]
     @Query private var sessions: [Session]
+    @Query private var teams: [Team]
 
     @State private var status: StatusFilter = .all
     @State private var sessionFilter: PersistentIdentifier?
@@ -51,6 +60,10 @@ struct PatchListView: View {
     @State private var dateFilter: Date?
     @State private var editTarget: PatchEditTarget?
     @State private var pendingDelete: PatchAwardEvent?
+    @State private var isSelecting = false
+    @State private var selectedEventIDs: Set<PersistentIdentifier> = []
+    @State private var shareTarget: ShareSheetTarget?
+    @State private var showCopiedToast = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -59,9 +72,25 @@ struct PatchListView: View {
         }
         .navigationTitle("Patch Tracker")
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button { editTarget = .new } label: { Image(systemName: "plus") }
-                    .accessibilityLabel("Add patch award")
+            if isSelecting {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { exitSelection() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button { performShare() } label: { Image(systemName: "square.and.arrow.up") }
+                        .disabled(selectedEventIDs.isEmpty)
+                        .accessibilityLabel("Share selected awards")
+                }
+            } else {
+                ToolbarItem(placement: .primaryAction) {
+                    Button { editTarget = .new } label: { Image(systemName: "plus") }
+                        .accessibilityLabel("Add patch award")
+                }
+                ToolbarItem(placement: .primaryAction) {
+                    Button { isSelecting = true } label: { Image(systemName: "checklist") }
+                        .disabled(events.isEmpty)
+                        .accessibilityLabel("Select awards to share")
+                }
             }
         }
         .sheet(item: $editTarget) { target in
@@ -70,6 +99,7 @@ struct PatchListView: View {
             case .existing(let event): PatchEditView(event: event)
             }
         }
+        .sheet(item: $shareTarget) { target in ShareSheet(items: target.items) }
         .alert(
             "Delete patch award?",
             isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }),
@@ -85,6 +115,16 @@ struct PatchListView: View {
         .onChange(of: sessionFilter) { _, _ in
             // Division/Player/Date options are session-scoped, so clear them when the session changes.
             divisionFilter = nil; playerFilter = nil; dateFilter = nil
+        }
+        .overlay(alignment: .bottom) {
+            if showCopiedToast {
+                Text("Summary copied — paste it as your caption.")
+                    .font(.footnote)
+                    .padding(.horizontal, 12).padding(.vertical, 8)
+                    .background(.thinMaterial, in: Capsule())
+                    .padding(.bottom, 24)
+                    .transition(.opacity)
+            }
         }
     }
 
@@ -127,9 +167,21 @@ struct PatchListView: View {
             List(displayGroups) { group in
                 eventRow(group)
                     .contentShape(Rectangle())
-                    .onTapGesture { editTarget = .existing(group.event) }
+                    .onTapGesture {
+                        if isSelecting {
+                            toggleSelection(group.event)
+                        } else {
+                            editTarget = .existing(group.event)
+                        }
+                    }
+                    .onLongPressGesture {
+                        if !isSelecting {
+                            isSelecting = true
+                            selectedEventIDs = [group.event.persistentModelID]
+                        }
+                    }
                     .swipeActions(edge: .trailing) {
-                        if !(group.event.session?.isFinalized ?? false) {
+                        if !isSelecting && !(group.event.session?.isFinalized ?? false) {
                             Button(role: .destructive) { pendingDelete = group.event } label: {
                                 Label("Delete", systemImage: "trash")
                             }
@@ -144,6 +196,12 @@ struct PatchListView: View {
         let event = group.event
         let finalized = event.session?.isFinalized ?? false
         return HStack(alignment: .top, spacing: 12) {
+            if isSelecting {
+                let selected = selectedEventIDs.contains(event.persistentModelID)
+                Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(selected ? Color.accentColor : .secondary)
+                    .padding(.top, 4)
+            }
             DateBadge(date: event.dateEarned)
             VStack(alignment: .leading, spacing: 4) {
                 Text("\(event.player?.name ?? "—") · #\(event.player?.playerNumber ?? "—") · \(divisionText(event.division))")
@@ -306,5 +364,80 @@ struct PatchListView: View {
         context.delete(event)
         try? context.save()
         pendingDelete = nil
+    }
+
+    private func toggleSelection(_ event: PatchAwardEvent) {
+        let id = event.persistentModelID
+        if selectedEventIDs.contains(id) {
+            selectedEventIDs.remove(id)
+        } else {
+            selectedEventIDs.insert(id)
+        }
+    }
+
+    private func exitSelection() {
+        isSelecting = false
+        selectedEventIDs = []
+    }
+
+    /// The team the player is on for this award's division (one team per player per division) —
+    /// nil if the award has no division or the player isn't rostered on any team in it.
+    private func teamName(for player: Player?, division: String) -> String? {
+        guard let player else { return nil }
+        return teams.first { team in
+            team.division == division && team.members.contains { $0.player?.persistentModelID == player.persistentModelID }
+        }?.name
+    }
+
+    /// One line per selected event, using ALL of its lines regardless of the active status
+    /// filter chip (mirrors the Android share, which shares the full award even if the visible
+    /// list is currently narrowed to Owed/Awarded only).
+    private func buildShareSummary(_ selectedEvents: [PatchAwardEvent]) -> String {
+        let lines = selectedEvents.map { event -> String in
+            var seenNames = Set<String>()
+            var patchParts: [String] = []
+            for line in event.lines {
+                guard let name = line.patchType?.name, !seenNames.contains(name) else { continue }
+                seenNames.insert(name)
+                patchParts.append(repeatLineIDs.contains(line.persistentModelID) ? "\(name) (repeat)" : name)
+            }
+            let patches = patchParts.joined(separator: ", ")
+            let team = teamName(for: event.player, division: event.division)
+            let who: String
+            if let team, !team.isEmpty {
+                who = "\(event.player?.name ?? "—") (\(team))"
+            } else {
+                who = event.player?.name ?? "—"
+            }
+            return "\(who) — \(patches)"
+        }
+        return "Patch awards! 🎉\n\n" + lines.joined(separator: "\n")
+    }
+
+    /// Copies the plain-text summary to the clipboard (some share targets drop pre-filled text
+    /// on image shares) and opens the system share sheet with the summary and any of the
+    /// selected events' photos attached.
+    private func performShare() {
+        let selected = sortedEvents.filter { selectedEventIDs.contains($0.persistentModelID) }
+        guard !selected.isEmpty else { return }
+
+        let summary = buildShareSummary(selected)
+        UIPasteboard.general.string = summary
+
+        var seenPhotoPaths = Set<String>()
+        let images: [UIImage] = selected.compactMap { $0.photoPath }
+            .filter { !$0.isEmpty && seenPhotoPaths.insert($0).inserted }
+            .compactMap { PhotoStorage.image(for: $0) }
+
+        var items: [Any] = [summary]
+        items.append(contentsOf: images)
+        shareTarget = ShareSheetTarget(items: items)
+        exitSelection()
+
+        showCopiedToast = true
+        Task {
+            try? await Task.sleep(nanoseconds: 2_500_000_000)
+            showCopiedToast = false
+        }
     }
 }

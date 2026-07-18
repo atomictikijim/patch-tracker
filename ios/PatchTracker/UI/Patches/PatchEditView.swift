@@ -19,8 +19,9 @@ private struct PatchLineState: Identifiable {
 }
 
 /// Add/edit a patch award entry: player, session, division (from the player's teams), date,
-/// and one or more patch lines each with its own Awarded/Owed status. Presented as a sheet for
-/// both add (`event == nil`) and edit. Photo capture/picker is deferred to Phase 4.
+/// an optional photo (camera or photo library, via `PhotoField`), and one or more patch lines
+/// each with its own Awarded/Owed status. Presented as a sheet for both add (`event == nil`)
+/// and edit.
 struct PatchEditView: View {
     let event: PatchAwardEvent?
     @Environment(\.modelContext) private var context
@@ -34,6 +35,7 @@ struct PatchEditView: View {
     /// nil = no choice made yet; "" = explicitly "No division"; otherwise a division code.
     @State private var division: String?
     @State private var dateEarned = DateOnly.today()
+    @State private var photoPath: String?
     @State private var lines: [PatchLineState] = [PatchLineState()]
     @State private var addingPatchTypeTarget: PatchTypeSheetTarget?
     @State private var showingDeleteConfirm = false
@@ -84,6 +86,10 @@ struct PatchEditView: View {
                     divisionMenu
                     DatePicker("Date Earned", selection: $dateEarned, displayedComponents: .date)
                         .onChange(of: dateEarned) { _, new in dateEarned = DateOnly.startOfDay(new) }
+                }
+
+                Section("Photo") {
+                    PhotoField(photoPath: $photoPath)
                 }
 
                 Section("Patches") {
@@ -230,6 +236,7 @@ struct PatchEditView: View {
         selectedSession = event.session
         division = event.division
         dateEarned = event.dateEarned
+        photoPath = event.photoPath
         lines = event.lines.map { line in
             PatchLineState(
                 existingLine: line,
@@ -248,6 +255,7 @@ struct PatchEditView: View {
         if let event {
             event.division = division.trimmingCharacters(in: .whitespaces)
             event.dateEarned = dateEarned
+            event.photoPath = photoPath
             event.player = selectedPlayer
             event.session = selectedSession
             // Clear-and-reinsert the lines, mirroring the Android PatchAwardDao.setLines
@@ -258,7 +266,7 @@ struct PatchEditView: View {
             let newEvent = PatchAwardEvent(
                 division: division.trimmingCharacters(in: .whitespaces),
                 dateEarned: dateEarned,
-                photoPath: nil,
+                photoPath: photoPath,
                 player: selectedPlayer,
                 session: selectedSession
             )
