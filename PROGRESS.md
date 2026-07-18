@@ -8,13 +8,19 @@ Functional MVP, verified end-to-end on a physical device. Tracks a player roster
 
 ## Next action
 
-**iOS port — verify the scaffold on a Mac before continuing.** Phases 0–2 are written and pushed but **have never been compiled** (no Xcode in the Windows authoring environment). On a Mac:
+**iOS port — verify the scaffold via Codemagic CI, not a Mac.** There is no Mac available for this project at all, so `codemagic.yaml`'s new `ios-ci` workflow (macOS instance, `xcodegen generate` → simulator build → `xcodebuild test`, no code signing required, runs on every push/PR) is the only place Phases 0–2 ever get compiler feedback. It's untested as of 2026-07-18 — the first push that triggers it is the real verification step. Watch the Codemagic dashboard/build log for the first run and fix whatever it flags. Most-likely spots: SwiftData `@Model` types used as `NavigationLink` values / `Set` members, the `.onChange(of:)` two-param closure signature, `ContentUnavailableView`'s optional `description`, and `PersistentIdentifier` usage in the faceted-filter options. See `IOS_PORT_PLAN.md`'s new "Development workflow: Codemagic-only, no local Mac" section for how this reshapes the rest of the port (no Apple Developer account yet either — not needed until Phase 4's signed TestFlight workflow).
 
-1. `cd ios && brew install xcodegen && xcodegen generate && open PatchTracker.xcodeproj`
-2. Build (⌘B) against an iOS 17+ simulator and fix any compile errors. Most-likely spots: SwiftData `@Model` types used as `NavigationLink` values / `Set` members, the `.onChange(of:)` two-param closure signature, `ContentUnavailableView`'s optional `description`, and `PersistentIdentifier` usage in the faceted-filter options.
-3. Run it: the **Patch Types** tab should show the 33 seeded patches with icons; the other four tabs render their list UIs (empty until data is added). Add a session, player, etc. to sanity-check writes.
+Superseded steps (previously assumed Mac access, no longer applicable):
 
-Once it builds and runs clean, resume the port at **Phase 3 (editing flows)** — the add/edit and detail screens are currently `ContentUnavailableView` stubs. See `IOS_PORT_PLAN.md` for the phase breakdown.
+1. ~~`cd ios && brew install xcodegen && xcodegen generate && open PatchTracker.xcodeproj`~~
+2. ~~Build (⌘B) against an iOS 17+ simulator and fix any compile errors.~~
+3. ~~Run it, add a session/player/etc. to sanity-check writes.~~ — no interactive simulator
+   session exists in this workflow; the equivalent sanity check is XCUITest coverage added
+   during Phase 3, run headlessly by `ios-ci` on every push.
+
+Once `ios-ci` is green, resume the port at **Phase 3 (editing flows)** — the add/edit and
+detail screens are currently `ContentUnavailableView` stubs. See `IOS_PORT_PLAN.md` for the
+phase breakdown.
 
 The Android app itself has **no pending action** — pick from "Suggested next steps" below or take new feature requests.
 
@@ -22,7 +28,7 @@ The Android app itself has **no pending action** — pick from "Suggested next s
 
 ### iOS port (`ios/`, see `IOS_PORT_PLAN.md`)
 
-- **Build & verify on a Mac** (see Next action above) — do this before writing more Swift, so Phase 3 isn't stacked on an unverified base.
+- **Get `ios-ci` green on Codemagic** (see Next action above) — do this before writing more Swift, so Phase 3 isn't stacked on an unverified base.
 - **Phase 3 — editing flows:** flesh out the six stub screens — `PatchEditView` (multi-line award, player type-ahead, division dropdown from the player's teams incl. "No division", awarded/owed per line, photo), `PlayerDetailView`/`PlayerEditView` (view-then-edit, 5-digit unique-number validation, earned-patch + team lists), `TeamDetailView`/`TeamEditView` (8-slot roster, one-team-per-division enforcement, captain = slot 0), and wire "Edit" from the detail views.
 - **Phase 4 — platform integrations:** camera capture **and photo-library pick** (`PhotosPicker`, no permission) → `PhotoStorage` (relative filename) for patch awards, CSV import for players + teams (port the validation rules and result summary), and the selection-mode share on the Patches list (deferred from Phase 2) whose summary is `"{name} ({team}) — {patches} (repeat)"` (team-for-division, no player number) — matches Android v0.1.8.
 - **Phase 5 — sessions & backup:** session lifecycle in `SessionDetailView` (rename / set current / clear awards / finalize), `.zip` export + import via ZIPFoundation, read-only review screen. Finalize-on-export must **clear awarded lines and carry owed lines to the current session**, blocking export when the session being exported is itself current (Android v0.1.8).

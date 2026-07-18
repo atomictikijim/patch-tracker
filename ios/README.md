@@ -46,9 +46,12 @@ PatchTracker/
   Session/Division/Date/Player filters, Awarded/Owed status, "Repeat" flag, Mark Fulfilled,
   swipe-to-delete), Players, Teams (division filter), Sessions (start-new). Add/edit and
   detail screens are stubs (`ContentUnavailableView`) wired for navigation, pending Phase 3.
-- **Not yet compiled** — no Xcode in the authoring (Windows) environment, so the Swift is
-  unverified against a compiler. First Mac step: `xcodegen generate` then build and fix any
-  API mismatches (SwiftData/SwiftUI) before continuing.
+- **Compiled via Codemagic, not locally** — there is no Mac in this project's authoring
+  environment at all, so the `ios-ci` workflow in `../codemagic.yaml` (macOS instance,
+  `xcodegen generate` → build-for-simulator → `xcodebuild test`, no code signing needed)
+  is the *only* place this Swift ever gets compiler feedback. It runs on every push/PR.
+  Check the Codemagic dashboard (or its build logs) for the current build status before
+  assuming any recent Swift change actually compiles.
 
 Pending: Phase 3 (editing flows), Phase 4 (camera, CSV import, share), Phase 5 (session
 backup), Phase 6 (help, polish, QA). See [`../IOS_PORT_PLAN.md`](../IOS_PORT_PLAN.md).
