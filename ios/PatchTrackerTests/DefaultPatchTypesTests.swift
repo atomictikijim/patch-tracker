@@ -4,7 +4,7 @@ import XCTest
 final class DefaultPatchTypesTests: XCTestCase {
     // Mirrors app/src/main/.../data/DefaultPatchTypes.kt — the two catalogs must stay in sync.
     func testSeedCountMatchesAndroidCatalog() {
-        XCTAssertEqual(DefaultPatchTypes.seeds.count, 32)
+        XCTAssertEqual(DefaultPatchTypes.seeds.count, 23)
     }
 
     func testSeedNamesAreUnique() {

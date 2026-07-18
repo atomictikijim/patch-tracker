@@ -30,7 +30,7 @@ enum DefaultPatchTypes {
         Seed("I Beat a 7 (8-Ball)", "beat_8", "7"),
 
         // 9-Ball patches
-        Seed("9-Ball on the Break", "on_break_9"),
+        Seed("9-Ball on the Snap", "on_break_9"),
         Seed("9-Ball Break and Run", "break_run_9"),
         Seed("9-Ball Mini Slam", "mini_slam_9"),
         Seed("9-Ball Clean Sweep", "clean_sweep"),
@@ -45,16 +45,5 @@ enum DefaultPatchTypes {
         Seed("Good Sportsmanship", "sportsmanship"),
         Seed("I Beat the League Operator", "beat_operator"),
         Seed("MVP", "mvp"),
-
-        // Matches-played milestones
-        Seed("100 Matches Played", "milestone", "100"),
-        Seed("250 Matches Played", "milestone", "250"),
-        Seed("500 Matches Played", "milestone", "500"),
-        Seed("750 Matches Played", "milestone", "750"),
-        Seed("1000 Matches Played", "milestone", "1000"),
-        Seed("1500 Matches Played", "milestone", "1500"),
-        Seed("2000 Matches Played", "milestone", "2000"),
-        Seed("2500 Matches Played", "milestone", "2500"),
-        Seed("3000 Matches Played", "milestone", "3000"),
     ]
 }
