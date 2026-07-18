@@ -55,7 +55,7 @@ PatchTracker/
   name, wired into both the Patch Types tab and the patch-line picker). One real bug caught by
   `ios-ci`: a shadowed `let` binding in `PlayerLookupField` that couldn't be reassigned — see
   `NOTES.md` 2026-07-18.
-- **Phase 4** — platform integrations (written 2026-07-18, pending its first `ios-ci` run):
+- **Phase 4** — platform integrations (done, `ios-ci` green as of 2026-07-18):
   `PhotoField` (shared component: thumbnail + Take/Retake Photo via the new
   `CameraCaptureView` `UIImagePickerController` wrap, "Choose from Device" via `PhotosPicker`
   when `allowsLibraryPick` is set, Remove Photo) wired into `PatchEditView` (both camera and
@@ -67,12 +67,17 @@ PatchTracker/
   `PatchListView` gained a selection mode (long-press or the checklist toolbar button) and a
   share action: copies a Facebook-caption-style summary to the clipboard and opens the system
   share sheet with any selected awards' photos attached — interdependent filters and repeat-award
-  detection were already in place from Phase 2/3 so needed no new work here. New unit coverage:
-  `CsvImportTests` (parser edge cases — quoted fields, embedded quotes, BOM, CRLF, blank rows —
-  plus every player/team validation rule) since CSV import is exactly the kind of pure-logic
-  correctness the no-Mac workflow weights test coverage for. Still open: the signed
-  `ios-testflight` Codemagic workflow the plan calls for alongside Phase 4 is blocked on Apple
-  Developer Program enrollment, which hasn't been started yet.
+  detection were already in place from Phase 2/3 so needed no new work here. `CsvImporter` takes
+  a `CsvImportStore` protocol (identity by player number / team name+division, not
+  `PersistentIdentifier`) instead of a `ModelContext` directly, with `SwiftDataCsvImportStore`
+  adapting it for the real app — `CsvImportTests` drives a plain in-memory fake instead, after a
+  SwiftData-backed version of these tests hit a deterministic, unexplained crash/hang the moment
+  any test built a second `ModelContainer` while hosted inside the already-launched app process
+  (see `NOTES.md` 2026-07-18 for the full trail — the app code itself never needed a single fix,
+  only the test harness). No code changes were needed in `PlayerListView`/`TeamListView` to make
+  this switch. Still open: the signed `ios-testflight` Codemagic workflow the plan calls for
+  alongside Phase 4 is blocked on Apple Developer Program enrollment, which hasn't been started
+  yet.
 - **Compiled via Codemagic, not locally** — there is no Mac in this project's authoring
   environment at all, so the `ios-ci` workflow in `../codemagic.yaml` (macOS instance,
   `xcodegen generate` → build-for-simulator → `build-for-testing`/`test-without-building`)
