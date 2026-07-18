@@ -8,27 +8,16 @@ Functional MVP, verified end-to-end on a physical device. Tracks a player roster
 
 ## Next action
 
-**iOS port — verify the scaffold via Codemagic CI, not a Mac.** There is no Mac available for this project at all, so `codemagic.yaml`'s new `ios-ci` workflow (macOS instance, `xcodegen generate` → simulator build → `xcodebuild test`, no code signing required, runs on every push/PR) is the only place Phases 0–2 ever get compiler feedback. It's untested as of 2026-07-18 — the first push that triggers it is the real verification step. Watch the Codemagic dashboard/build log for the first run and fix whatever it flags. Most-likely spots: SwiftData `@Model` types used as `NavigationLink` values / `Set` members, the `.onChange(of:)` two-param closure signature, `ContentUnavailableView`'s optional `description`, and `PersistentIdentifier` usage in the faceted-filter options. See `IOS_PORT_PLAN.md`'s new "Development workflow: Codemagic-only, no local Mac" section for how this reshapes the rest of the port (no Apple Developer account yet either — not needed until Phase 4's signed TestFlight workflow).
+**iOS port — `ios-ci` is green, resume at Phase 3.** Codemagic's `ios-ci` workflow (macOS instance, `xcodegen generate` → simulator build → `build-for-testing`/`test-without-building`) had its first fully successful run on 2026-07-18: all of Phase 0–2's previously-uncompiled Swift built clean and `PatchTrackerTests` passed. Getting there took several rounds of Codemagic/XcodeGen configuration fixes (not Swift bugs) — see `NOTES.md`'s 2026-07-18 entry for the full trail (stale webhook, wrong simulator device name, `PRODUCT_NAME` space breaking `TEST_HOST`, scheme not marking the app `buildForTesting`, missing `GENERATE_INFOPLIST_FILE` on the test target) if `ios-ci` breaks again in a similar way.
 
-Superseded steps (previously assumed Mac access, no longer applicable):
+Next up: **Phase 3 (editing flows)** — the add/edit and detail screens are currently `ContentUnavailableView` stubs. See `IOS_PORT_PLAN.md` for the phase breakdown. Every new Swift change should keep triggering `ios-ci` (it's the only compiler feedback available), so keep pushes reasonably small and batched, per the "Development workflow: Codemagic-only, no local Mac" section of `IOS_PORT_PLAN.md`.
 
-1. ~~`cd ios && brew install xcodegen && xcodegen generate && open PatchTracker.xcodeproj`~~
-2. ~~Build (⌘B) against an iOS 17+ simulator and fix any compile errors.~~
-3. ~~Run it, add a session/player/etc. to sanity-check writes.~~ — no interactive simulator
-   session exists in this workflow; the equivalent sanity check is XCUITest coverage added
-   during Phase 3, run headlessly by `ios-ci` on every push.
-
-Once `ios-ci` is green, resume the port at **Phase 3 (editing flows)** — the add/edit and
-detail screens are currently `ContentUnavailableView` stubs. See `IOS_PORT_PLAN.md` for the
-phase breakdown.
-
-The Android app itself has **no pending action** — pick from "Suggested next steps" below or take new feature requests.
+The Android app itself has **no pending action** — pick from "Suggested next steps" below or take new feature requests. Note `debug-build` (Android) is now scoped via a Codemagic changeset filter to only auto-trigger on Android-relevant file changes (it still always triggers on any `codemagic.yaml` edit, per Codemagic's default behavior).
 
 ## Suggested next steps
 
 ### iOS port (`ios/`, see `IOS_PORT_PLAN.md`)
 
-- **Get `ios-ci` green on Codemagic** (see Next action above) — do this before writing more Swift, so Phase 3 isn't stacked on an unverified base.
 - **Phase 3 — editing flows:** flesh out the six stub screens — `PatchEditView` (multi-line award, player type-ahead, division dropdown from the player's teams incl. "No division", awarded/owed per line, photo), `PlayerDetailView`/`PlayerEditView` (view-then-edit, 5-digit unique-number validation, earned-patch + team lists), `TeamDetailView`/`TeamEditView` (8-slot roster, one-team-per-division enforcement, captain = slot 0), and wire "Edit" from the detail views.
 - **Phase 4 — platform integrations:** camera capture **and photo-library pick** (`PhotosPicker`, no permission) → `PhotoStorage` (relative filename) for patch awards, CSV import for players + teams (port the validation rules and result summary), and the selection-mode share on the Patches list (deferred from Phase 2) whose summary is `"{name} ({team}) — {patches} (repeat)"` (team-for-division, no player number) — matches Android v0.1.8.
 - **Phase 5 — sessions & backup:** session lifecycle in `SessionDetailView` (rename / set current / clear awards / finalize), `.zip` export + import via ZIPFoundation, read-only review screen. Finalize-on-export must **clear awarded lines and carry owed lines to the current session**, blocking export when the session being exported is itself current (Android v0.1.8).
@@ -45,6 +34,10 @@ The Android app itself has **no pending action** — pick from "Suggested next s
 - **Keeping the patch catalog current** — APA occasionally adds or retires patches. `DefaultPatchTypes.SEEDS` (the catalog) and `PatchIcons.ICON_SPECS` (the icon-per-category map) are the two places to update; the catalog re-seeds automatically on next app open, and an unmapped `iconKey` just falls back to a generic icon, so this is a non-breaking, low-risk update path.
 
 ## Log
+
+### 2026-07-18
+
+- **Got `ios-ci` green on Codemagic — first-ever compiler feedback for the iOS port.** There is no Mac anywhere for this project, so Codemagic is the only place the iOS Swift (Phases 0–2, written and pushed months ago but never compiled) can be verified. Added an `ios-ci` workflow to `codemagic.yaml` (macOS instance, `xcodegen generate` → simulator build → test) plus a `PatchTrackerTests` unit-test target with real tests (`DateOnlyTests`, `DefaultPatchTypesTests`) covering existing Phase 0/1 logic. First blocker turned out to be Codemagic setup, not Swift: the app's Codemagic webhook was stale, so it had only ever run its auto-generated "default" workflow and had never actually parsed `codemagic.yaml` — not even for the pre-existing Android workflows, which had also never really run. Fixing the webhook surfaced a second dormant bug: `gradlew` was tracked in git as non-executable, so `debug-build` (Android) failed with "Permission denied" the first time it ever actually ran; fixed with `git update-index --chmod=+x gradlew`. On the iOS side, the Swift itself compiled clean on the very first real attempt — everything after that was Codemagic/XcodeGen configuration, not app bugs: wrong simulator device name (image has no iPhone 15), a `PRODUCT_NAME` with a space breaking XcodeGen's auto-computed `TEST_HOST` path, the `scheme: testTargets:` shorthand not marking the app `buildForTesting`, and a missing `GENERATE_INFOPLIST_FILE` on the test target. Also scoped `debug-build` with a Codemagic changeset filter so iOS-only pushes don't also trigger an Android APK build (any edit to `codemagic.yaml` itself still triggers it regardless, per Codemagic's default). Rewrote `IOS_PORT_PLAN.md`'s workflow assumptions around this no-Mac, Codemagic-only reality. Full blow-by-blow in `NOTES.md`'s 2026-07-18 entry. Next: resume the port at Phase 3 (editing flows).
 
 ### 2026-07-10
 
