@@ -20,7 +20,14 @@ func parseCsv(_ text: String) -> [[String]] {
     var field = ""
     var inQuotes = false
     let stripped = text.hasPrefix("\u{FEFF}") ? String(text.dropFirst()) : text
-    let chars = Array(stripped)
+    // Swift's `Character` treats "\r\n" as a single grapheme cluster, so scanning by Character
+    // would never see a standalone \r or \n in a CRLF file and the pair would just fall through
+    // to the plain-append branch below. Normalize every line ending to a bare \n up front so the
+    // scan only ever needs to recognize one row terminator.
+    let normalized = stripped
+        .replacingOccurrences(of: "\r\n", with: "\n")
+        .replacingOccurrences(of: "\r", with: "\n")
+    let chars = Array(normalized)
     var i = 0
 
     func endField() {
@@ -48,8 +55,6 @@ func parseCsv(_ text: String) -> [[String]] {
             inQuotes = true
         } else if c == "," {
             endField()
-        } else if c == "\r" {
-            // swallow; the \n (or end of input) closes the row
         } else if c == "\n" {
             endRow()
         } else {
