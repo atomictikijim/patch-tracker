@@ -88,8 +88,7 @@ workflows:
           xcodebuild test \
             -project "$XCODE_PROJECT" \
             -scheme "$XCODE_SCHEME" \
-            -destination 'platform=iOS Simulator,name=iPhone 17,OS=latest' \
-            CODE_SIGNING_ALLOWED=NO
+            -destination 'platform=iOS Simulator,name=iPhone 17,OS=latest'
     publishing:
       email:
         recipients:
