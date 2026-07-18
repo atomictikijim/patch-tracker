@@ -180,7 +180,7 @@ is on for that award's division (bare name if none), the player **number is omit
 patch the player earned earlier in the same session+division is tagged `(repeat)` (reuse the
 repeat-detection set, don't recompute). Photos ride along as share images.
 
-**Phase 5 — Sessions & backup (~2–3 days)**
+**Phase 5 — Sessions & backup (~2–3 days) — written 2026-07-18, pending `ios-ci` verification**
 Session lifecycle (current / finalize / lock); clear-session-awards; `.zip` export +
 import via ZIPFoundation (JSON + photos); read-only review screen. **Finalize-on-export
 carry-forward (Android v0.1.8):** exporting a session writes the backup first, then, in one
@@ -191,6 +191,11 @@ all-awarded events), and finally marks the session finalized. Owed patches move 
 **current** session, so export the *old* session after the next one is current — if the
 session being exported is itself current (nowhere to carry to), **block export** with a
 "start the next session first" prompt and change nothing.
+Implemented as `SessionDetailView` (lifecycle UI) + `SessionBackup.swift` (wire-format ↔
+display-ready structs, zip I/O via `FileManager.zipItem`/`unzipItem`, repeat detection) +
+`SessionFinalize` (the carry/delete decision split into a unit-tested pure function plus a
+thin SwiftData-mutating `apply`) + `SessionReviewView` (read-only reopened-backup screen).
+See NOTES.md/PROGRESS.md 2026-07-18 for the write-up; not yet confirmed green on `ios-ci`.
 
 **Phase 4 also needs a signed Codemagic workflow** (`ios-testflight`, triggered on tag,
 mirroring the Android `release-build` pattern): automatic code signing via an App Store

@@ -1,13 +1,17 @@
 import SwiftUI
 import SwiftData
+import UniformTypeIdentifiers
 
-/// Session list. Rows push to the (Phase 5) session detail; the toolbar "+" starts a new session,
-/// which becomes the current session. (Backup export/review lands in Phase 5.)
+/// Session list. Rows push to the session detail (rename/set current/export/finalize/delete);
+/// the toolbar "+" starts a new session, which becomes the current session, and the toolbar
+/// "open" button reopens a `.zip` backup for read-only review.
 struct SessionListView: View {
     @Environment(\.modelContext) private var context
     @Query private var sessions: [Session]
     @State private var showingNew = false
     @State private var newName = ""
+    @State private var showingImporter = false
+    @State private var reviewBackup: ResolvedSessionBackup?
 
     private var orderedSessions: [Session] {
         sessions.sorted { $0.createdDate > $1.createdDate }
@@ -46,6 +50,10 @@ struct SessionListView: View {
                 Button { showingNew = true } label: { Image(systemName: "plus") }
                     .accessibilityLabel("Start new session")
             }
+            ToolbarItem(placement: .primaryAction) {
+                Button { showingImporter = true } label: { Image(systemName: "square.and.arrow.down") }
+                    .accessibilityLabel("Open backup for review")
+            }
         }
         .alert("Start New Session", isPresented: $showingNew) {
             TextField("Session name", text: $newName)
@@ -53,6 +61,19 @@ struct SessionListView: View {
             Button("Cancel", role: .cancel) { newName = "" }
         } message: {
             Text("The new session becomes the current session.")
+        }
+        .fileImporter(isPresented: $showingImporter, allowedContentTypes: [.zip]) { result in
+            guard case .success(let url) = result else { return }
+            guard url.startAccessingSecurityScopedResource() else { return }
+            defer { url.stopAccessingSecurityScopedResource() }
+            guard let zipData = try? Data(contentsOf: url),
+                  let (raw, photosDir) = try? SessionBackup.readZipData(zipData) else { return }
+            reviewBackup = SessionBackup.resolve(raw, photosDir: photosDir)
+        }
+        .sheet(
+            isPresented: Binding(get: { reviewBackup != nil }, set: { if !$0 { reviewBackup = nil } })
+        ) {
+            if let reviewBackup { SessionReviewView(backup: reviewBackup) }
         }
     }
 

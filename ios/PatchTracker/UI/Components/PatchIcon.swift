@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// The patch-icon system, ported from the Android `PatchIcons.kt`. Renders, in priority order:
 /// a user-captured photo (if `imagePath` is set) > a built-in SF-Symbol spec keyed by `iconKey`
@@ -63,9 +64,13 @@ struct PatchIcon: View {
     let badgeText: String?
     let imagePath: String?
     var size: CGFloat = 40
+    /// When set, rendered instead of resolving `imagePath` via `PhotoStorage` — for contexts
+    /// like session-backup review where a photo lives at an arbitrary extracted `.zip` path
+    /// rather than the app's own `patch_photos` directory.
+    var overrideImage: UIImage? = nil
 
     var body: some View {
-        if let uiImage = PhotoStorage.image(for: imagePath) {
+        if let uiImage = overrideImage ?? PhotoStorage.image(for: imagePath) {
             Image(uiImage: uiImage)
                 .resizable()
                 .scaledToFill()
