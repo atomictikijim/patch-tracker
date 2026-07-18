@@ -22,6 +22,9 @@ struct PatchTypesView: View {
                 Button { showingAdd = true } label: { Image(systemName: "plus") }
                     .accessibilityLabel("Add patch type")
             }
+            ToolbarItem(placement: .primaryAction) {
+                HelpAction(title: "Patch Types")
+            }
         }
         .sheet(isPresented: $showingAdd) { NewPatchTypeView { _ in } }
     }

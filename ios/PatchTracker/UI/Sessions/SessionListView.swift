@@ -39,6 +39,7 @@ struct SessionListView: View {
                                 TagPill(text: "Finalized")
                             }
                         }
+                        .accessibilityElement(children: .combine)
                     }
                 }
             }
@@ -53,6 +54,9 @@ struct SessionListView: View {
             ToolbarItem(placement: .primaryAction) {
                 Button { showingImporter = true } label: { Image(systemName: "square.and.arrow.down") }
                     .accessibilityLabel("Open backup for review")
+            }
+            ToolbarItem(placement: .primaryAction) {
+                HelpAction(title: "Sessions", sections: ["Sessions", "Data & backups"])
             }
         }
         .alert("Start New Session", isPresented: $showingNew) {

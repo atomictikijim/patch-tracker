@@ -18,6 +18,12 @@ targets:
     deploymentTarget: "17.0"
     sources:
       - path: PatchTracker
+      # Bundled at build time from the repo-root doc so in-app Help can never drift from it —
+      # mirrors the Android app's copyFeaturesDoc Gradle task, which does the same thing by
+      # copying the same source file into assets rather than checking in a duplicate.
+      - path: ../FEATURES.md
+        name: FEATURES.md
+        buildPhase: resources
     dependencies:
       - package: ZIPFoundation
     settings:

@@ -76,8 +76,11 @@ struct SessionReviewView: View {
                     .resizable().scaledToFill()
                     .frame(width: 48, height: 48)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .accessibilityHidden(true)
             }
         }
         .padding(.vertical, 4)
+        // Fully read-only, no interactive children — safe to read as one VoiceOver stop.
+        .accessibilityElement(children: .combine)
     }
 }

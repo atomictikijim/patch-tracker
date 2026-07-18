@@ -59,6 +59,7 @@ struct TeamListView: View {
                                             .font(.subheadline).foregroundStyle(.secondary)
                                     }
                                 }
+                                .accessibilityElement(children: .combine)
                             }
                         }
                     }
@@ -75,6 +76,9 @@ struct TeamListView: View {
             ToolbarItem(placement: .primaryAction) {
                 Button { showingImporter = true } label: { Image(systemName: "square.and.arrow.down") }
                     .accessibilityLabel("Import teams from CSV")
+            }
+            ToolbarItem(placement: .primaryAction) {
+                HelpAction(title: "Teams")
             }
         }
         .sheet(isPresented: $showingAdd) { TeamEditView(team: nil) }

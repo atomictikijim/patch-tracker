@@ -91,6 +91,9 @@ struct PatchListView: View {
                         .disabled(events.isEmpty)
                         .accessibilityLabel("Select awards to share")
                 }
+                ToolbarItem(placement: .primaryAction) {
+                    HelpAction(title: "Patches")
+                }
             }
         }
         .sheet(item: $editTarget) { target in
@@ -204,10 +207,14 @@ struct PatchListView: View {
             }
             DateBadge(date: event.dateEarned)
             VStack(alignment: .leading, spacing: 4) {
-                Text("\(event.player?.name ?? "—") · #\(event.player?.playerNumber ?? "—") · \(divisionText(event.division))")
-                    .font(.headline)
-                Text("Session: \(event.session?.name ?? "—")")
-                    .font(.caption).foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("\(event.player?.name ?? "—") · #\(event.player?.playerNumber ?? "—") · \(divisionText(event.division))")
+                        .font(.headline)
+                    Text("Session: \(event.session?.name ?? "—")")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                // One VoiceOver stop for the player/division/session header, rather than three.
+                .accessibilityElement(children: .combine)
 
                 ForEach(group.lines) { line in
                     HStack(spacing: 8) {
@@ -236,6 +243,7 @@ struct PatchListView: View {
                     .resizable().scaledToFill()
                     .frame(width: 48, height: 48)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .accessibilityHidden(true)
             }
         }
         .padding(.vertical, 4)

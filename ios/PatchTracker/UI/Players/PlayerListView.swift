@@ -29,6 +29,7 @@ struct PlayerListView: View {
                             Spacer()
                             Text("#\(player.playerNumber)").foregroundStyle(.secondary)
                         }
+                        .accessibilityElement(children: .combine)
                     }
                 }
             }
@@ -43,6 +44,9 @@ struct PlayerListView: View {
             ToolbarItem(placement: .primaryAction) {
                 Button { showingImporter = true } label: { Image(systemName: "square.and.arrow.down") }
                     .accessibilityLabel("Import players from CSV")
+            }
+            ToolbarItem(placement: .primaryAction) {
+                HelpAction(title: "Players")
             }
         }
         .sheet(isPresented: $showingAdd) { PlayerEditView(player: nil) }

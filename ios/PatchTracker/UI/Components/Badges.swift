@@ -20,7 +20,7 @@ struct DateBadge: View {
         VStack(spacing: 0) {
             Text(month)
                 .font(.caption2).fontWeight(.bold)
-                .foregroundStyle(.white)
+                .foregroundStyle(LeagueColors.onPrimary)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 2)
                 .background(LeagueColors.blue)
@@ -33,6 +33,9 @@ struct DateBadge: View {
         .frame(width: 48)
         .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.secondary.opacity(0.35)))
         .clipShape(RoundedRectangle(cornerRadius: 6))
+        // Otherwise VoiceOver reads the month and day as two separate stops ("JUL", "18").
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(date.leagueFormatted())
     }
 
     private func monthAbbrev(_ date: Date) -> String {
@@ -49,13 +52,16 @@ struct InitialsAvatar: View {
 
     var body: some View {
         Circle()
-            .fill(LeagueColors.blue.opacity(0.15))
+            .fill(LeagueColors.primaryContainer)
             .frame(width: 40, height: 40)
             .overlay(
                 Text(initials)
                     .font(.subheadline).fontWeight(.bold)
-                    .foregroundStyle(LeagueColors.blue)
+                    .foregroundStyle(LeagueColors.onPrimaryContainer)
             )
+            // Decorative — the adjacent name text already conveys identity to VoiceOver, so
+            // don't make it announce the initials letter-by-letter first.
+            .accessibilityHidden(true)
     }
 
     private var initials: String {
@@ -98,10 +104,10 @@ struct TagPill: View {
     var body: some View {
         Text(text)
             .font(.caption).fontWeight(.bold)
-            .foregroundStyle(prominent ? LeagueColors.blue : .secondary)
+            .foregroundStyle(prominent ? LeagueColors.onPrimaryContainer : .secondary)
             .padding(.horizontal, 10).padding(.vertical, 4)
             .background(
-                (prominent ? LeagueColors.blue.opacity(0.15) : Color.secondary.opacity(0.15)),
+                (prominent ? LeagueColors.primaryContainer : Color.secondary.opacity(0.15)),
                 in: RoundedRectangle(cornerRadius: 4)
             )
     }

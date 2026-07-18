@@ -202,11 +202,29 @@ mirroring the Android `release-build` pattern): automatic code signing via an Ap
 Connect API key, `.ipa` build, TestFlight upload. This is the first phase gated on
 Apple Developer Program enrollment being complete.
 
-**Phase 6 — Help, polish, QA (~2–3 days, plus real-device time this app has never had)**
+**Phase 6 — Help, polish, QA (~2–3 days, plus real-device time this app has never had) —
+written 2026-07-18, pending `ios-ci` verification**
 Bundle & render `FEATURES.md` per screen; empty states; iPad layout pass; light/dark;
 VoiceOver + Dynamic Type; device testing on both idioms via TestFlight installs (no
 Mac to plug a device into — TestFlight is also the only way to get the app onto a
 physical iPhone/iPad at all here).
+Implemented: `HelpContent.swift`/`HelpView.swift` (`FEATURES.md` bundled as a build-time resource,
+split into H2 sections, rendered with a ported block parser + native `AttributedString(markdown:)`
+inline styling, wired to a Help button on all five tabs); adaptive `LeagueColors` brand tokens
+(`blue`/`onPrimary`/`primaryContainer`/`onPrimaryContainer`, mirroring Android's
+`MaterialTheme.colorScheme` light/dark split) applied to `DateBadge`/`InitialsAvatar`/`TagPill`,
+plus a dark `AccentColor` variant; VoiceOver polish (`.accessibilityElement(children: .combine)` on
+list rows, hidden decorative avatars/thumbnails, a single combined date label on `DateBadge`); and
+`NavigationSplitView` iPad adaptivity for Players/Teams/Sessions, added *only* at the `ContentView`
+tab-container level — each list screen's existing `NavigationLink(value:)` +
+`.navigationDestination(for:)` needed no changes, since that value-based navigation API resolves
+correctly in either a `NavigationStack` (push, iPhone) or a `NavigationSplitView`'s sidebar column
+(split, iPad) with no other code changes. Empty states were already in place from earlier phases
+(one `ContentUnavailableView` per list/filtered-empty state); the new split-view detail columns
+each get one too ("Select a Player/Team/Session"). Device testing itself remains blocked on the
+signed `ios-testflight` workflow (Apple Developer Program enrollment not started) — the layout
+change is structurally verified by `ios-ci`'s build step but not visually confirmed on an actual
+iPad, per this phase's own caveat above.
 
 **Rough total: ~3–4 weeks of feature work for one iOS developer, plus CI round-trip
 overhead throughout** — the no-Mac constraint doesn't add phases, but it slows every
