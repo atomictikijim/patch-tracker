@@ -109,3 +109,44 @@ workflows:
       email:
         recipients:
           - james.milne@prolocity.com
+
+  native-ios-unsigned:
+    name: Native iOS Unsigned Build
+    instance_type: mac_mini_m2
+    max_build_duration: 30
+    environment:
+      xcode: latest
+      vars:
+        XCODE_PROJECT: "PatchTracker.xcodeproj"
+        XCODE_SCHEME: "PatchTracker"
+    scripts:
+      - name: Install XcodeGen
+        script: |
+          brew install xcodegen
+      - name: Generate Xcode project
+        script: |
+          cd ios && xcodegen generate
+      - name: Build Unsigned Xcode Binary
+        script: |
+          cd ios
+          xcodebuild build \
+            -project "$XCODE_PROJECT" \
+            -scheme "$XCODE_SCHEME" \
+            -sdk iphoneos \
+            -configuration Release \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            BUILD_DIR=$HOME/build
+      - name: Package Unsigned Application into IPA
+        script: |
+          cd $HOME/build/Release-iphoneos
+          mkdir -p Payload
+          cp -r PatchTracker.app Payload/
+          zip -r unsigned_app.ipa Payload
+    artifacts:
+      - $HOME/build/Release-iphoneos/unsigned_app.ipa
+    publishing:
+      email:
+        recipients:
+          - james.milne@prolocity.com
