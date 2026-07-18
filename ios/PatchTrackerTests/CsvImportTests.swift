@@ -5,10 +5,16 @@ import SwiftData
 @MainActor
 final class CsvImportTests: XCTestCase {
     private func makeContext() -> ModelContext {
+        // The XCTest bundle runs inside the already-launched PatchTracker.app process, whose
+        // PatchTrackerApp.init() already created a real, file-backed ModelContainer for this same
+        // schema under the implicit configuration name "default". An unnamed
+        // ModelConfiguration(isStoredInMemoryOnly:) here would default to that same "default"
+        // name, colliding with the app's container for overlapping models in one process — give
+        // this one an explicit, distinct name instead.
         let container = try! ModelContainer(
             for: Player.self, PatchType.self, Team.self, TeamMember.self,
             Session.self, PatchAwardEvent.self, PatchAwardLine.self,
-            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+            configurations: ModelConfiguration("CsvImportTests", isStoredInMemoryOnly: true)
         )
         return container.mainContext
     }
