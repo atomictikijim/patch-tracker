@@ -34,7 +34,7 @@ struct PlayerLookupField: View {
                 TextField(label, text: $query, prompt: Text(players.isEmpty ? "No players available" : "Type a name to search"))
                     .focused($focused)
                     .onChange(of: query) { _, new in
-                        if let selected, new != display(selected) { selected = nil }
+                        if let currentSelection = selected, new != display(currentSelection) { selected = nil }
                     }
                 if !query.isEmpty {
                     Button {
