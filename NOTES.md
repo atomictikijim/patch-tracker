@@ -293,3 +293,7 @@ Excluding carried lines from the grouping (not just from the flagged set) is wha
 - Signed/device builds (TestFlight, App Store) remain gated on Apple Developer Program enrollment, which does not exist yet — tracked as a Phase 0-parallel/Phase 4-blocking action item, not solved here.
 
 **Related metadata:** `codemagic.yaml` (`ios-ci` workflow), `ios/project.yml` (`PatchTrackerTests` target + scheme wiring), `ios/PatchTrackerTests/*.swift`, `IOS_PORT_PLAN.md`, `ios/README.md`, `PROGRESS.md`.
+
+**Follow-up (same day) — first `ios-ci` run and two setup quirks:**
+- The Codemagic app for this repo had a stale webhook, so it was only ever running its auto-generated "default" workflow and had never actually parsed `codemagic.yaml` (not even for the existing Android workflows). Clicking **Update Webhooks** in the app's settings fixed detection; `debug-build`/`release-build`/`ios-ci` then appeared as selectable workflows.
+- The first `ios-ci` run failed immediately (exit 70, before any Swift compiled) because the destination `platform=iOS Simulator,name=iPhone 15,OS=latest` doesn't exist on Codemagic's current macOS image — its simulator catalog starts at iPhone 16e/17-class devices, no iPhone 15. Fixed by switching the build step to the device-agnostic `-destination 'generic/platform=iOS Simulator'` (compiles without needing a concrete runtime — resilient to the device catalog changing again) and pinning the test step to `name=iPhone 17,OS=latest` (tests need one real simulator instance to run against).
