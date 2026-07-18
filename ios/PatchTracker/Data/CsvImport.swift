@@ -103,17 +103,38 @@ private extension Array where Element == String {
 
 /// (name, division) identity used to detect a duplicate team both against the existing DB state
 /// and against rows already added earlier in the same import.
-private struct TeamKey: Hashable {
+struct TeamKey: Hashable {
     let name: String
     let division: String
 }
 
-/// Ports `PatchRepository.importPlayersCsv`/`importTeamsCsv` — direct SwiftData writes since this
-/// app has no repository layer. Both functions validate + insert row by row and save once at the
-/// end, mirroring the Android per-row skip/warning behavior exactly (including the same message
-/// strings, so a league rep sees the same feedback on either platform).
+/// The minimal read/write surface `CsvImporter` needs from the data layer, abstracted behind a
+/// protocol (rather than calling `ModelContext` directly) so the parsing/validation logic — the
+/// part worth covering with fast, deterministic unit tests — can be tested against a plain
+/// in-memory fake instead of a live SwiftData `ModelContainer`. All identity here is by business
+/// key (player number, team name+division) rather than `PersistentIdentifier`, since that's all
+/// the import logic actually needs. `SwiftDataCsvImportStore` adapts this to the real app data.
+protocol CsvImportStore {
+    func existingPlayerNumbers() -> Set<String>
+    func insertPlayer(name: String, playerNumber: String, phoneNumber: String?, email: String?)
+
+    /// player number -> player name, for every existing player.
+    func playersByNumber() -> [String: String]
+    func existingTeamKeys() -> Set<TeamKey>
+    /// division -> set of player numbers already rostered in it.
+    func occupancyByDivision() -> [String: Set<String>]
+    /// Creates a team with the given already-validated, ordered roster (slot 0 = captain).
+    func insertTeam(name: String, division: String, memberPlayerNumbers: [String])
+
+    func save()
+}
+
+/// Ports `PatchRepository.importPlayersCsv`/`importTeamsCsv`. Both functions validate + insert
+/// row by row and save once at the end, mirroring the Android per-row skip/warning behavior
+/// exactly (including the same message strings, so a league rep sees the same feedback on either
+/// platform).
 enum CsvImporter {
-    static func importPlayers(_ text: String, context: ModelContext) -> ImportSummary {
+    static func importPlayers(_ text: String, store: CsvImportStore) -> ImportSummary {
         let rows = parseCsv(text)
         guard !rows.isEmpty else {
             return ImportSummary(added: 0, skipped: ["The file has no rows."])
@@ -129,8 +150,7 @@ enum CsvImporter {
         let phoneIdx = header.index("phonenumber", "phone")
         let emailIdx = header.index("email", "emailaddress")
 
-        let existingPlayers = (try? context.fetch(FetchDescriptor<Player>())) ?? []
-        var existingNumbers = Set(existingPlayers.map { $0.playerNumber })
+        var existingNumbers = store.existingPlayerNumbers()
 
         var skipped: [String] = []
         var added = 0
@@ -149,21 +169,21 @@ enum CsvImporter {
             } else {
                 let phone = row.cell(phoneIdx)
                 let email = row.cell(emailIdx)
-                context.insert(Player(
+                store.insertPlayer(
                     name: name,
                     playerNumber: number,
                     phoneNumber: phone.isEmpty ? nil : phone,
                     email: email.isEmpty ? nil : email
-                ))
+                )
                 existingNumbers.insert(number)
                 added += 1
             }
         }
-        try? context.save()
+        store.save()
         return ImportSummary(added: added, skipped: skipped)
     }
 
-    static func importTeams(_ text: String, context: ModelContext) -> ImportSummary {
+    static func importTeams(_ text: String, store: CsvImportStore) -> ImportSummary {
         let rows = parseCsv(text)
         guard !rows.isEmpty else {
             return ImportSummary(added: 0, skipped: ["The file has no rows."])
@@ -180,19 +200,11 @@ enum CsvImporter {
             n == 1 ? header.index("player1", "captain") : header.index("player\(n)")
         }
 
-        let allPlayers = (try? context.fetch(FetchDescriptor<Player>())) ?? []
-        let playersByNumber = Dictionary(uniqueKeysWithValues: allPlayers.map { ($0.playerNumber, $0) })
-        let existingTeams = (try? context.fetch(FetchDescriptor<Team>())) ?? []
-        var existingTeamKeys = Set(existingTeams.map {
-            TeamKey(name: $0.name.trimmingCharacters(in: .whitespaces).lowercased(), division: $0.division)
-        })
-
-        // division -> playerIds already rostered in it (existing DB rows + rows added earlier in
-        // this import), enforcing one-team-per-division-per-player across the whole import.
-        var occupancy: [String: Set<PersistentIdentifier>] = [:]
-        for team in existingTeams {
-            occupancy[team.division, default: []].formUnion(team.members.compactMap { $0.player?.persistentModelID })
-        }
+        let playersByNumber = store.playersByNumber()
+        var existingTeamKeys = store.existingTeamKeys()
+        // division -> player numbers already rostered in it (existing rows + rows added earlier
+        // in this import), enforcing one-team-per-division-per-player across the whole import.
+        var occupancy = store.occupancyByDivision()
 
         var skipped: [String] = []
         var warnings: [String] = []
@@ -218,36 +230,93 @@ enum CsvImporter {
             }
 
             var divOccupancy = occupancy[division, default: []]
-            var slotPlayers: [Player] = []
+            var memberNumbers: [String] = []
             for col in playerCols {
-                if slotPlayers.count >= MAX_TEAM_PLAYERS { break }
+                if memberNumbers.count >= MAX_TEAM_PLAYERS { break }
                 let num = row.cell(col)
                 if num.isEmpty { continue }
-                guard let player = playersByNumber[num] else {
+                guard let playerName = playersByNumber[num] else {
                     warnings.append("Row \(lineNo) (\(name)): player #\(num) not found — skipped.")
                     continue
                 }
-                if slotPlayers.contains(where: { $0.persistentModelID == player.persistentModelID }) {
+                if memberNumbers.contains(num) {
                     continue // duplicate within the same row, silently ignored
                 }
-                if divOccupancy.contains(player.persistentModelID) {
-                    warnings.append("Row \(lineNo) (\(name)): \(player.name) (#\(num)) is already on a team in division \(division) — skipped.")
+                if divOccupancy.contains(num) {
+                    warnings.append("Row \(lineNo) (\(name)): \(playerName) (#\(num)) is already on a team in division \(division) — skipped.")
                     continue
                 }
-                slotPlayers.append(player)
+                memberNumbers.append(num)
             }
 
-            let newTeam = Team(name: name, division: division)
-            context.insert(newTeam)
-            for (slot, player) in slotPlayers.enumerated() {
-                context.insert(TeamMember(position: slot, team: newTeam, player: player))
-            }
-            divOccupancy.formUnion(slotPlayers.map { $0.persistentModelID })
+            store.insertTeam(name: name, division: division, memberPlayerNumbers: memberNumbers)
+            divOccupancy.formUnion(memberNumbers)
             occupancy[division] = divOccupancy
             existingTeamKeys.insert(key)
             added += 1
         }
-        try? context.save()
+        store.save()
         return ImportSummary(added: added, skipped: skipped, warnings: warnings)
+    }
+}
+
+/// Adapts a live SwiftData `ModelContext` to `CsvImportStore` for production use, and provides
+/// `context:`-based convenience overloads so call sites (`PlayerListView`/`TeamListView`) don't
+/// need to construct the store themselves.
+struct SwiftDataCsvImportStore: CsvImportStore {
+    let context: ModelContext
+
+    func existingPlayerNumbers() -> Set<String> {
+        Set(((try? context.fetch(FetchDescriptor<Player>())) ?? []).map { $0.playerNumber })
+    }
+
+    func insertPlayer(name: String, playerNumber: String, phoneNumber: String?, email: String?) {
+        context.insert(Player(name: name, playerNumber: playerNumber, phoneNumber: phoneNumber, email: email))
+    }
+
+    func playersByNumber() -> [String: String] {
+        let players = (try? context.fetch(FetchDescriptor<Player>())) ?? []
+        return Dictionary(uniqueKeysWithValues: players.map { ($0.playerNumber, $0.name) })
+    }
+
+    func existingTeamKeys() -> Set<TeamKey> {
+        let teams = (try? context.fetch(FetchDescriptor<Team>())) ?? []
+        return Set(teams.map {
+            TeamKey(name: $0.name.trimmingCharacters(in: .whitespaces).lowercased(), division: $0.division)
+        })
+    }
+
+    func occupancyByDivision() -> [String: Set<String>] {
+        let teams = (try? context.fetch(FetchDescriptor<Team>())) ?? []
+        var result: [String: Set<String>] = [:]
+        for team in teams {
+            result[team.division, default: []].formUnion(team.members.compactMap { $0.player?.playerNumber })
+        }
+        return result
+    }
+
+    func insertTeam(name: String, division: String, memberPlayerNumbers: [String]) {
+        let allPlayers = (try? context.fetch(FetchDescriptor<Player>())) ?? []
+        let byNumber = Dictionary(uniqueKeysWithValues: allPlayers.map { ($0.playerNumber, $0) })
+        let newTeam = Team(name: name, division: division)
+        context.insert(newTeam)
+        for (slot, number) in memberPlayerNumbers.enumerated() {
+            guard let player = byNumber[number] else { continue }
+            context.insert(TeamMember(position: slot, team: newTeam, player: player))
+        }
+    }
+
+    func save() {
+        try? context.save()
+    }
+}
+
+extension CsvImporter {
+    static func importPlayers(_ text: String, context: ModelContext) -> ImportSummary {
+        importPlayers(text, store: SwiftDataCsvImportStore(context: context))
+    }
+
+    static func importTeams(_ text: String, context: ModelContext) -> ImportSummary {
+        importTeams(text, store: SwiftDataCsvImportStore(context: context))
     }
 }
