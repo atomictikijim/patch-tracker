@@ -180,7 +180,7 @@ is on for that award's division (bare name if none), the player **number is omit
 patch the player earned earlier in the same session+division is tagged `(repeat)` (reuse the
 repeat-detection set, don't recompute). Photos ride along as share images.
 
-**Phase 5 — Sessions & backup (~2–3 days) — written 2026-07-18, pending `ios-ci` verification**
+**Phase 5 — Sessions & backup (~2–3 days) — done, `ios-ci` green 2026-07-18**
 Session lifecycle (current / finalize / lock); clear-session-awards; `.zip` export +
 import via ZIPFoundation (JSON + photos); read-only review screen. **Finalize-on-export
 carry-forward (Android v0.1.8):** exporting a session writes the backup first, then, in one
