@@ -37,9 +37,6 @@ targets:
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
-    scheme:
-      testTargets:
-        - PatchTrackerTests
 
   PatchTrackerTests:
     type: bundle.unit-test
@@ -52,3 +49,22 @@ targets:
     settings:
       base:
         SWIFT_VERSION: "5.0"
+
+schemes:
+  PatchTracker:
+    build:
+      targets:
+        PatchTracker: [run, test, profile, analyze, archive]
+        PatchTrackerTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - PatchTrackerTests
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
