@@ -1,11 +1,12 @@
 import SwiftUI
 import SwiftData
 
-/// The patch catalog. This is the first fully-wired screen — it reads the seeded `PatchType`s
-/// via `@Query` and renders each with the ported `PatchIcon` system, proving the data + icon
-/// layers end-to-end. Add/edit of custom patch types comes in a later phase.
+/// The patch catalog. Reads the seeded `PatchType`s via `@Query` and renders each with the
+/// ported `PatchIcon` system. The toolbar "+" adds a custom patch type by name (camera/photo
+/// capture for custom patches lands in Phase 4 — see `NewPatchTypeView`).
 struct PatchTypesView: View {
     @Query(sort: \PatchType.name) private var patchTypes: [PatchType]
+    @State private var showingAdd = false
 
     var body: some View {
         List(patchTypes) { type in
@@ -16,5 +17,12 @@ struct PatchTypesView: View {
             }
         }
         .navigationTitle("Patch Types")
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button { showingAdd = true } label: { Image(systemName: "plus") }
+                    .accessibilityLabel("Add patch type")
+            }
+        }
+        .sheet(isPresented: $showingAdd) { NewPatchTypeView { _ in } }
     }
 }

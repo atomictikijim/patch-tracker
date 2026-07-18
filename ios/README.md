@@ -44,8 +44,18 @@ PatchTracker/
 - **Phase 1 core** — data model layer, seeding, theme, patch-icon system, tab shell (done).
 - **Phase 2** — the four list screens (done): Patches (grouped by event, interdependent
   Session/Division/Date/Player filters, Awarded/Owed status, "Repeat" flag, Mark Fulfilled,
-  swipe-to-delete), Players, Teams (division filter), Sessions (start-new). Add/edit and
-  detail screens are stubs (`ContentUnavailableView`) wired for navigation, pending Phase 3.
+  swipe-to-delete), Players, Teams (division filter), Sessions (start-new).
+- **Phase 3 — editing flows (written, pending its first `ios-ci` verification):**
+  `PlayerDetailView`/`PlayerEditView` (view-then-edit, 5-digit unique-number validation,
+  earned-patch + team lists), `TeamDetailView`/`TeamEditView` (view-then-edit, 8-slot roster
+  via the new `PlayerLookupField` type-ahead component, one-team-per-division enforcement,
+  clear-and-reinsert roster on save), `PatchEditView` (multi-line award editor: player
+  look-up, session/division menus, per-line patch-type picker with inline "+ Add new patch
+  type", Awarded/Owed toggle + fulfilled date), and `NewPatchTypeView` (custom patch type by
+  name, wired into both the Patch Types tab and the patch-line picker). **Photo capture/picker
+  is deferred to Phase 4** as planned — patch awards and custom patch types have no photo UI
+  yet. No new automated test coverage (XCUITest isn't scaffolded yet); correctness rests on
+  `ios-ci` catching compile errors plus a manual pass once installable via TestFlight.
 - **Compiled via Codemagic, not locally** — there is no Mac in this project's authoring
   environment at all, so the `ios-ci` workflow in `../codemagic.yaml` (macOS instance,
   `xcodegen generate` → build-for-simulator → `build-for-testing`/`test-without-building`)
@@ -58,5 +68,5 @@ PatchTracker/
   `GENERATE_INFOPLIST_FILE` on the test target) — see `NOTES.md`'s 2026-07-18 entry for
   the full trail if `ios-ci` breaks again in a similar way.
 
-Pending: Phase 3 (editing flows), Phase 4 (camera, CSV import, share), Phase 5 (session
-backup), Phase 6 (help, polish, QA). See [`../IOS_PORT_PLAN.md`](../IOS_PORT_PLAN.md).
+Pending: Phase 4 (camera/photo-picker, CSV import, share), Phase 5 (session backup),
+Phase 6 (help, polish, QA). See [`../IOS_PORT_PLAN.md`](../IOS_PORT_PLAN.md).
