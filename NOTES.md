@@ -319,7 +319,7 @@ Excluding carried lines from the grouping (not just from the flagged set) is wha
 
 **Related metadata:** `app/src/main/java/com/prolocity/patchtracker/data/DefaultPatchTypes.kt`, `ios/PatchTracker/Data/DefaultPatchTypes.swift`, `ios/PatchTrackerTests/DefaultPatchTypesTests.swift`, `FEATURES.md` (date bumped only — the Patch Types section already describes the catalog generically, no specific patch names to update).
 
-## 2026-07-18 — iOS Phase 3 (editing flows) written, unverified
+## 2026-07-18 — iOS Phase 3 (editing flows) written and verified green
 
 **Type:** Decision / scope note
 
@@ -334,6 +334,10 @@ Excluding carried lines from the grouping (not just from the flagged set) is wha
 - **Clear-and-reinsert on save** for both team rosters (`TeamMember` rows) and patch-award lines (`PatchAwardLine` rows), matching the Android `TeamDao.setMembers`/`PatchAwardDao.setLines` convention already documented in `CLAUDE.md` — the edit screen always deletes the existing child rows and reinserts the current in-memory set, rather than diffing incremental changes.
 - **No new automated tests.** XCUITest isn't scaffolded in this project yet, and these are UI/interaction-heavy screens rather than pure logic, so there was nothing suitable to unit-test the way `DateOnlyTests`/`DefaultPatchTypesTests` cover the data layer.
 
-**Verification status:** written and manually self-reviewed for likely Swift/SwiftUI compile pitfalls (tuple keypaths in `ForEach`, `@Bindable` vs plain `let`, `Binding` subscripting, memberwise-init interactions with `@Environment`/`@State`/`@Query`) since there is no local Mac to compile against — **not yet verified by `ios-ci`**. Expect this to need a few rounds of fixes given the size of the change (5 screens + 1 shared component in one batch, the largest single Swift change since the initial scaffold).
+**Verification status:** written and manually self-reviewed for likely Swift/SwiftUI compile pitfalls (tuple keypaths in `ForEach`, `@Bindable` vs plain `let`, `Binding` subscripting, memberwise-init interactions with `@Environment`/`@State`/`@Query`) since there is no local Mac to compile against, then pushed to `ios-ci`.
+
+**The manual review caught most of it, but not everything** — the first `ios-ci` run found one real Swift bug: `PlayerLookupField.swift`'s `.onChange(of: query)` handler had `if let selected, new != display(selected) { selected = nil }`. The `if let selected` unwraps the `@Binding var selected: Player?` into a **local immutable `let selected: Player`** that shadows the binding for the rest of that scope — so the `selected = nil` inside the block was trying to reassign that shadowed `let`, not the binding, which xcodebuild correctly rejected: `cannot assign to value: 'selected' is a 'let' constant`. Fix: rename the unwrapped local (`if let currentSelection = selected, ...`) so the binding's name stays unshadowed and assignable. Checked every other `if let event`/`if let team`/`if let player`-style unwrap across the new files for the same pattern — none of the others reassign the shadowed name itself (they only mutate the unwrapped object's own properties, e.g. `team.name = ...`, which is fine even through a `let`).
+
+**Outcome: `ios-ci` fully green (build + `PatchTrackerTests`) after that one fix** — a single round-trip for the entire Phase 3 batch (5 screens + 1 shared component), the largest single Swift change since the initial scaffold.
 
 **Related metadata:** `ios/PatchTracker/UI/Players/PlayerDetailView.swift`, `ios/PatchTracker/UI/Players/PlayerEditView.swift`, `ios/PatchTracker/UI/Teams/TeamDetailView.swift`, `ios/PatchTracker/UI/Teams/TeamEditView.swift`, `ios/PatchTracker/UI/Patches/PatchEditView.swift`, `ios/PatchTracker/UI/PatchTypes/NewPatchTypeView.swift`, `ios/PatchTracker/UI/PatchTypes/PatchTypesView.swift`, `ios/PatchTracker/UI/Components/PlayerLookupField.swift`.
