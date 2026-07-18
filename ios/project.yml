@@ -23,7 +23,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.prolocity.patchtracker
-        PRODUCT_NAME: Patch Tracker
+        PRODUCT_NAME: PatchTracker
         MARKETING_VERSION: "0.1.0"
         CURRENT_PROJECT_VERSION: "1"
         # Universal: 1 = iPhone, 2 = iPad
