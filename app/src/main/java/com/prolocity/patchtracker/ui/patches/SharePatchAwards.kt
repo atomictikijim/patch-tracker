@@ -66,18 +66,26 @@ private fun buildSummary(
     repeatLineIds: Set<Long>
 ): String {
     val lines = groups.map { group ->
-        // Each patch, deduped by name; tagged with "(repeat)" if the player has earned it before
-        // in this session+division (matches the in-list Repeat badge, computed from
-        // repeatLineIds), and/or "(raffle)" if they opted for the Mini Mania raffle instead of
-        // taking the patch (matches the in-list purple Raffle status badge).
+        // Grouped by name (preserving first-seen order) rather than deduped away, so a patch
+        // awarded more than once in this same entry still shows up - just collapsed onto one
+        // line with a "×N" suffix instead of one line per identical patch. Tags come from the
+        // group's first (earliest) line: "(repeat)" if the player earned this patch before this
+        // entry - either an earlier line in this same award or an earlier award entirely (matches
+        // the in-list Repeat badge, computed from repeatLineIds) - and/or "(raffle)" if they
+        // opted for the Mini Mania raffle instead of taking the patch (matches the in-list purple
+        // Raffle status badge). A same-entry duplicate's own line is never itself the "first" one
+        // seen for its key, so it never mints an artificial repeat tag just from being duplicated.
         val patches = group.lines
-            .distinctBy { it.patchName }
-            .joinToString(", ") { line ->
+            .groupBy { it.patchName }
+            .entries
+            .joinToString(", ") { (name, linesForName) ->
+                val first = linesForName.first()
                 val tags = buildList {
-                    if (line.lineId in repeatLineIds) add("repeat")
-                    if (line.status == PatchLineStatus.RAFFLE) add("raffle")
+                    if (first.lineId in repeatLineIds) add("repeat")
+                    if (first.status == PatchLineStatus.RAFFLE) add("raffle")
                 }
-                if (tags.isEmpty()) line.patchName else "${line.patchName} (${tags.joinToString(", ")})"
+                val label = if (tags.isEmpty()) name else "$name (${tags.joinToString(", ")})"
+                if (linesForName.size > 1) "$label ×${linesForName.size}" else label
             }
         // The team the player is on for this award's division (one team per player per division),
         // added in parentheses after their name. Awards with no division / no matching team just

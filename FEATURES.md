@@ -1,6 +1,6 @@
 # Patch Tracker — Feature Guide
 
-Version 0.1.11 · last updated 2026-07-19
+Version 0.1.12 · last updated 2026-07-19
 
 Patch Tracker is an Android app for a local APA (American Poolplayers Association)
 pool league. It keeps track of which patches each player has earned, whether the
@@ -117,11 +117,15 @@ shows the **player's name and their team** (the team they're on in that award's
 division), followed by the patches — with each patch tagged **(repeat)** if the
 player has earned it before in the same session and division, and/or
 **(raffle)** if they opted for the Mini Mania raffle instead of taking that
-patch. Both tags can apply to the same patch. For example:
+patch. Both tags can apply to the same patch. If the same patch appears more
+than once on one award (e.g. the player received two of the same patch at
+once), it's shown once with a **×N** suffix instead of being listed twice.
+For example:
 
 > Ariel Lopez (Storm Breakers) — 8-Ball Clean Sweep
 > Damian Aviles (ShotCallers) — 8-Ball Clean Sweep (repeat)
 > Angel Ponce (Fantastic 8) — 8-Ball on the Break (repeat, raffle)
+> Wild Bill Keister (Cue Crew) — 9-Ball on the Snap ×2
 
 (Posting to the league's Facebook group is the final manual step — pick the group
 in the share sheet and paste the caption.)

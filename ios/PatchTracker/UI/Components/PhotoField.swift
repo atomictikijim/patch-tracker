@@ -33,19 +33,26 @@ struct PhotoField: View {
             }
 
             VStack(alignment: .leading, spacing: 6) {
+                // Each control needs its own .borderless style here - without it, Form/List
+                // rows treat every unstyled Button/PhotosPicker stacked in the same row as one
+                // combined tap target, so tapping any single one fires all of them (seen as
+                // "Take Photo" also opening the library, then the camera once that's dismissed).
                 Button(photoPath == nil ? "Take Photo" : "Retake Photo") {
                     showingCamera = true
                 }
+                .buttonStyle(.borderless)
                 .disabled(!cameraAvailable)
 
                 if allowsLibraryPick {
                     PhotosPicker(selection: $librarySelection, matching: .images) {
                         Text("Choose from Device")
                     }
+                    .buttonStyle(.borderless)
                 }
 
                 if photoPath != nil {
                     Button("Remove Photo", role: .destructive) { photoPath = nil }
+                        .buttonStyle(.borderless)
                 }
             }
         }
