@@ -56,6 +56,7 @@ import com.prolocity.patchtracker.data.PatchAwardEvent
 import com.prolocity.patchtracker.data.PatchAwardLineDetails
 import com.prolocity.patchtracker.data.Session
 import com.prolocity.patchtracker.ui.PatchTrackerViewModel
+import com.prolocity.patchtracker.ui.components.AboutAction
 import com.prolocity.patchtracker.ui.components.BrandTopAppBar
 import com.prolocity.patchtracker.ui.components.ConfirmDialog
 import com.prolocity.patchtracker.ui.components.DateBadge
@@ -246,6 +247,7 @@ fun PatchListScreen(
                             }
                         }
                         HelpAction("Patches")
+                        AboutAction()
                     }
                 )
             }

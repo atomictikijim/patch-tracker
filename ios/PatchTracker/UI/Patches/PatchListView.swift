@@ -94,6 +94,9 @@ struct PatchListView: View {
                 ToolbarItem(placement: .primaryAction) {
                     HelpAction(title: "Patches")
                 }
+                ToolbarItem(placement: .primaryAction) {
+                    AboutAction()
+                }
             }
         }
         .sheet(item: $editTarget) { target in

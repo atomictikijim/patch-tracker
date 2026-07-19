@@ -58,6 +58,9 @@ struct SessionListView: View {
             ToolbarItem(placement: .primaryAction) {
                 HelpAction(title: "Sessions", sections: ["Sessions", "Data & backups"])
             }
+            ToolbarItem(placement: .primaryAction) {
+                AboutAction()
+            }
         }
         .alert("Start New Session", isPresented: $showingNew) {
             TextField("Session name", text: $newName)

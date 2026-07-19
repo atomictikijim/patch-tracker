@@ -70,6 +70,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     // Bundle the repo-root FEATURES.md as an app asset so the in-app Help screens render the exact

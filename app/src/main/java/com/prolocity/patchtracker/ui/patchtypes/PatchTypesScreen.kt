@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.prolocity.patchtracker.data.PatchType
 import com.prolocity.patchtracker.ui.PatchTrackerViewModel
+import com.prolocity.patchtracker.ui.components.AboutAction
 import com.prolocity.patchtracker.ui.components.BrandTopAppBar
 import com.prolocity.patchtracker.ui.components.ConfirmDialog
 import com.prolocity.patchtracker.ui.components.HelpAction
@@ -47,7 +48,15 @@ fun PatchTypesScreen(viewModel: PatchTrackerViewModel) {
     var pendingDelete by remember { mutableStateOf<PatchType?>(null) }
 
     Scaffold(
-        topBar = { BrandTopAppBar(title = "Patch Types", actions = { HelpAction("Patch Types") }) },
+        topBar = {
+            BrandTopAppBar(
+                title = "Patch Types",
+                actions = {
+                    HelpAction("Patch Types")
+                    AboutAction()
+                }
+            )
+        },
         floatingActionButton = {
             FloatingActionButton(onClick = { showAddDialog = true }) {
                 Icon(Icons.Filled.Add, contentDescription = "Add patch type")

@@ -48,6 +48,9 @@ struct PlayerListView: View {
             ToolbarItem(placement: .primaryAction) {
                 HelpAction(title: "Players")
             }
+            ToolbarItem(placement: .primaryAction) {
+                AboutAction()
+            }
         }
         .sheet(isPresented: $showingAdd) { PlayerEditView(player: nil) }
         .fileImporter(

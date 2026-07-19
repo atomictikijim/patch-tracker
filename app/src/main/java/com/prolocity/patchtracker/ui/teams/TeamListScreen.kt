@@ -43,6 +43,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.prolocity.patchtracker.data.ImportSummary
 import com.prolocity.patchtracker.data.MAX_TEAM_PLAYERS
 import com.prolocity.patchtracker.ui.PatchTrackerViewModel
+import com.prolocity.patchtracker.ui.components.AboutAction
 import com.prolocity.patchtracker.ui.components.BrandTopAppBar
 import com.prolocity.patchtracker.ui.components.CsvImportResultDialog
 import com.prolocity.patchtracker.ui.components.CSV_MIME_TYPES
@@ -89,6 +90,7 @@ fun TeamListScreen(
                         Icon(Icons.Filled.UploadFile, contentDescription = "Import teams from CSV")
                     }
                     HelpAction("Teams")
+                    AboutAction()
                 }
             )
         },

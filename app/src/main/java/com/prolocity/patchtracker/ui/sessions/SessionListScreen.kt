@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.prolocity.patchtracker.data.readSessionBackup
 import com.prolocity.patchtracker.ui.PatchTrackerViewModel
+import com.prolocity.patchtracker.ui.components.AboutAction
 import com.prolocity.patchtracker.ui.components.BrandTopAppBar
 import com.prolocity.patchtracker.ui.components.HelpAction
 import com.prolocity.patchtracker.ui.components.SessionFormDialog
@@ -77,6 +78,7 @@ fun SessionListScreen(
                         Icon(Icons.Filled.FileOpen, contentDescription = "Open backup for review")
                     }
                     HelpAction("Sessions", sections = listOf("Sessions", "Data & backups"))
+                    AboutAction()
                 }
             )
         },

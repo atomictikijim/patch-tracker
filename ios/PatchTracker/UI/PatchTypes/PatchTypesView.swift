@@ -25,6 +25,9 @@ struct PatchTypesView: View {
             ToolbarItem(placement: .primaryAction) {
                 HelpAction(title: "Patch Types")
             }
+            ToolbarItem(placement: .primaryAction) {
+                AboutAction()
+            }
         }
         .sheet(isPresented: $showingAdd) { NewPatchTypeView { _ in } }
     }
