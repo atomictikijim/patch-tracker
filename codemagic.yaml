@@ -32,7 +32,7 @@ workflows:
     publishing:
       email:
         recipients:
-          - james.milne@prolocity.com
+          - atomictikijim@gmail.com
 
   release-build:
     name: Release Build
@@ -62,7 +62,7 @@ workflows:
     publishing:
       email:
         recipients:
-          - james.milne@prolocity.com
+          - atomictikijim@gmail.com
 
   ios-ci:
     name: iOS CI (Simulator build + tests)
@@ -108,7 +108,7 @@ workflows:
     publishing:
       email:
         recipients:
-          - james.milne@prolocity.com
+          - atomictikijim@gmail.com
 
   native-ios-unsigned:
     name: Native iOS Unsigned Build
@@ -149,4 +149,4 @@ workflows:
     publishing:
       email:
         recipients:
-          - james.milne@prolocity.com
+          - atomictikijim@gmail.com
