@@ -21,9 +21,11 @@ data class PatchAwardLineDetails(
     val patchBadgeText: String?,
     val patchImagePath: String?,
     val awardedAtTime: Boolean,
-    val fulfilledDate: LocalDate?
+    val fulfilledDate: LocalDate?,
+    val optedForRaffle: Boolean
 ) {
-    val isOutstanding: Boolean get() = !awardedAtTime && fulfilledDate == null
+    val status: PatchLineStatus get() = patchLineStatus(awardedAtTime, fulfilledDate, optedForRaffle)
+    val isOutstanding: Boolean get() = status == PatchLineStatus.OWED
 
     // A line carried in from a previously-finalized session: its earned date predates the session
     // it now lives in (owed patches move forward on export, keeping their original earlier date).

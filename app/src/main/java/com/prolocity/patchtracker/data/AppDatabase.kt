@@ -12,7 +12,7 @@ import kotlinx.coroutines.launch
 
 @Database(
     entities = [Player::class, PatchType::class, PatchAwardEvent::class, PatchAwardLine::class, Team::class, TeamMember::class, Session::class],
-    version = 12,
+    version = 13,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -49,7 +49,7 @@ abstract class AppDatabase : RoomDatabase() {
                             }
                         }
                     })
-                    .addMigrations(MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
+                    .addMigrations(MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13)
                     // Pre-release schema: no real user data to preserve across patch-catalog updates
                     // on any other version gap; the migrations above preserve real award history.
                     .fallbackToDestructiveMigration()

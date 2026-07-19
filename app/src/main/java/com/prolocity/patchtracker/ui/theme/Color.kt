@@ -53,3 +53,7 @@ val Amber80 = Color(0xFFFFE082)
 val Green40 = Color(0xFF2E7D32)
 val GreenGrey40 = Color(0xFF4C6B4F)
 val Amber40 = Color(0xFFA36A00)
+
+// Raffle status - distinct from the brand blue so it doesn't read as a link/action color
+val Purple80 = Color(0xFFD8C6F0)
+val Purple40 = Color(0xFF6A3FA0)

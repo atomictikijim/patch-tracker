@@ -83,3 +83,11 @@ val MIGRATION_11_12 = object : Migration(11, 12) {
         db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_players_playerNumber` ON `players` (`playerNumber`)")
     }
 }
+
+// Adds the "opted for Mini Mania raffle" flag on each patch line - a plain column add, no
+// foreign-key rebuild needed. Defaults to false so every existing line keeps its current status.
+val MIGRATION_12_13 = object : Migration(12, 13) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE patch_award_lines ADD COLUMN optedForRaffle INTEGER NOT NULL DEFAULT 0")
+    }
+}

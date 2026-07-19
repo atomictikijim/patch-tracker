@@ -74,6 +74,7 @@ private data class PatchLineState(
     val lineId: Long,
     val patchType: PatchType?,
     val awardedAtTime: Boolean,
+    val optedForRaffle: Boolean,
     val fulfilled: Boolean,
     val fulfilledDate: LocalDate
 )
@@ -167,7 +168,7 @@ fun PatchEditScreen(
         val raw = rawLines
         if (raw != null && !linesInitialized && (raw.isEmpty() || patchTypes.isNotEmpty())) {
             lines = if (raw.isEmpty()) {
-                listOf(PatchLineState(key = newKey(), lineId = 0, patchType = null, awardedAtTime = true, fulfilled = false, fulfilledDate = LocalDate.now()))
+                listOf(PatchLineState(key = newKey(), lineId = 0, patchType = null, awardedAtTime = true, optedForRaffle = false, fulfilled = false, fulfilledDate = LocalDate.now()))
             } else {
                 raw.map { line ->
                     PatchLineState(
@@ -175,6 +176,7 @@ fun PatchEditScreen(
                         lineId = line.id,
                         patchType = patchTypes.find { it.id == line.patchTypeId },
                         awardedAtTime = line.awardedAtTime,
+                        optedForRaffle = line.optedForRaffle,
                         fulfilled = line.fulfilledDate != null,
                         fulfilledDate = line.fulfilledDate ?: LocalDate.now()
                     )
@@ -317,7 +319,10 @@ fun PatchEditScreen(
                                 showAddPatchTypeDialog = true
                             },
                             onAwardedAtTimeChanged = { awarded ->
-                                lines = lines.map { if (it.key == line.key) it.copy(awardedAtTime = awarded) else it }
+                                lines = lines.map { if (it.key == line.key) it.copy(awardedAtTime = awarded, optedForRaffle = false) else it }
+                            },
+                            onOptedForRaffleChanged = { raffle ->
+                                lines = lines.map { if (it.key == line.key) it.copy(optedForRaffle = raffle, awardedAtTime = false) else it }
                             },
                             onFulfilledChanged = { fulfilled ->
                                 lines = lines.map { if (it.key == line.key) it.copy(fulfilled = fulfilled) else it }
@@ -338,6 +343,7 @@ fun PatchEditScreen(
                             lineId = 0,
                             patchType = null,
                             awardedAtTime = true,
+                            optedForRaffle = false,
                             fulfilled = false,
                             fulfilledDate = LocalDate.now()
                         )
@@ -411,7 +417,8 @@ fun PatchEditScreen(
                             eventId = event.id,
                             patchTypeId = line.patchType!!.id,
                             awardedAtTime = line.awardedAtTime,
-                            fulfilledDate = if (!line.awardedAtTime && line.fulfilled) line.fulfilledDate else null
+                            fulfilledDate = if (!line.awardedAtTime && !line.optedForRaffle && line.fulfilled) line.fulfilledDate else null,
+                            optedForRaffle = line.optedForRaffle
                         )
                     }
                     if (isNew) viewModel.addPatchAwardEvent(event, awardLines) else viewModel.updatePatchAwardEvent(event, awardLines)
@@ -463,6 +470,7 @@ private fun PatchLineCard(
     onPatchTypeSelected: (PatchType) -> Unit,
     onAddNewPatchType: () -> Unit,
     onAwardedAtTimeChanged: (Boolean) -> Unit,
+    onOptedForRaffleChanged: (Boolean) -> Unit,
     onFulfilledChanged: (Boolean) -> Unit,
     onFulfilledDateChanged: (LocalDate) -> Unit,
     onRemove: () -> Unit
@@ -501,13 +509,18 @@ private fun PatchLineCard(
                 label = { Text("Awarded at the time") }
             )
             FilterChip(
-                selected = !line.awardedAtTime,
+                selected = !line.awardedAtTime && !line.optedForRaffle,
                 onClick = { onAwardedAtTimeChanged(false) },
                 label = { Text("Still owed") }
             )
+            FilterChip(
+                selected = line.optedForRaffle,
+                onClick = { onOptedForRaffleChanged(true) },
+                label = { Text("Opted for Mini Mania raffle") }
+            )
         }
 
-        if (!line.awardedAtTime) {
+        if (!line.awardedAtTime && !line.optedForRaffle) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Checkbox(checked = line.fulfilled, onCheckedChange = onFulfilledChanged)
                 Text("Since fulfilled")

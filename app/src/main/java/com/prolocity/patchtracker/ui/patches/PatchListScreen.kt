@@ -54,6 +54,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.prolocity.patchtracker.data.PatchAwardEvent
 import com.prolocity.patchtracker.data.PatchAwardLineDetails
+import com.prolocity.patchtracker.data.PatchLineStatus
 import com.prolocity.patchtracker.data.Session
 import com.prolocity.patchtracker.ui.PatchTrackerViewModel
 import com.prolocity.patchtracker.ui.components.AboutAction
@@ -68,7 +69,7 @@ import com.prolocity.patchtracker.ui.components.formatted
 import java.io.File
 import java.time.LocalDate
 
-private enum class StatusFilter(val label: String) { ALL("All"), AWARDED("Awarded"), OWED("Owed") }
+private enum class StatusFilter(val label: String) { ALL("All"), AWARDED("Awarded"), OWED("Owed"), RAFFLE("Raffle") }
 
 internal data class PatchEventGroup(
     val eventId: Long,
@@ -173,8 +174,9 @@ fun PatchListScreen(
     // dropdown's options.
     fun matchesStatus(g: PatchEventGroup) = when (filter) {
         StatusFilter.ALL -> true
-        StatusFilter.AWARDED -> g.lines.any { !it.isOutstanding }
-        StatusFilter.OWED -> g.lines.any { it.isOutstanding }
+        StatusFilter.AWARDED -> g.lines.any { it.status == PatchLineStatus.AWARDED }
+        StatusFilter.OWED -> g.lines.any { it.status == PatchLineStatus.OWED }
+        StatusFilter.RAFFLE -> g.lines.any { it.status == PatchLineStatus.RAFFLE }
     }
     fun matchesSession(g: PatchEventGroup) = sessionFilterId == null || g.sessionId == sessionFilterId
     fun matchesDivision(g: PatchEventGroup) = divisionFilter == null || g.division == divisionFilter
@@ -208,8 +210,9 @@ fun PatchListScreen(
             }
             val matching = when (filter) {
                 StatusFilter.ALL -> group.lines
-                StatusFilter.AWARDED -> group.lines.filter { !it.isOutstanding }
-                StatusFilter.OWED -> group.lines.filter { it.isOutstanding }
+                StatusFilter.AWARDED -> group.lines.filter { it.status == PatchLineStatus.AWARDED }
+                StatusFilter.OWED -> group.lines.filter { it.status == PatchLineStatus.OWED }
+                StatusFilter.RAFFLE -> group.lines.filter { it.status == PatchLineStatus.RAFFLE }
             }
             if (matching.isEmpty()) null else group.copy(lines = matching)
         }
@@ -433,7 +436,7 @@ private fun PatchEventRow(
                     if (line.lineId in repeatLineIds) {
                         RepeatBadge()
                     }
-                    StatusBadge(awarded = !line.isOutstanding)
+                    StatusBadge(status = line.status)
                     if (line.isOutstanding && !group.sessionFinalized && !selectionMode) {
                         TextButton(onClick = { onMarkFulfilled(line.lineId) }) { Text("Mark Fulfilled") }
                     }

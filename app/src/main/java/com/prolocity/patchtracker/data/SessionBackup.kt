@@ -18,8 +18,11 @@ data class SessionBackupPatch(
     val badgeText: String?,
     val imagePath: String?,
     val awardedAtTime: Boolean,
-    val fulfilledDate: LocalDate?
-)
+    val fulfilledDate: LocalDate?,
+    val optedForRaffle: Boolean
+) {
+    val status: PatchLineStatus get() = patchLineStatus(awardedAtTime, fulfilledDate, optedForRaffle)
+}
 
 data class SessionBackupAward(
     val playerName: String,
@@ -58,7 +61,8 @@ fun buildSessionBackupData(
                     badgeText = line.patchBadgeText,
                     imagePath = line.patchImagePath,
                     awardedAtTime = line.awardedAtTime,
-                    fulfilledDate = line.fulfilledDate
+                    fulfilledDate = line.fulfilledDate,
+                    optedForRaffle = line.optedForRaffle
                 )
             }
         )
@@ -137,6 +141,7 @@ private fun toJson(data: SessionBackupData): JSONObject = JSONObject().apply {
                             put("photoFileName", patch.imagePath?.let { File(it).name })
                             put("awardedAtTime", patch.awardedAtTime)
                             put("fulfilledDate", patch.fulfilledDate?.toString())
+                            put("optedForRaffle", patch.optedForRaffle)
                         })
                     }
                 })
@@ -161,7 +166,8 @@ private fun fromJson(root: JSONObject, resolvePhoto: (String?) -> String?): Sess
                 badgeText = patchObj.optStringOrNull("badgeText"),
                 imagePath = resolvePhoto(patchObj.optStringOrNull("photoFileName")),
                 awardedAtTime = patchObj.getBoolean("awardedAtTime"),
-                fulfilledDate = patchObj.optStringOrNull("fulfilledDate")?.let { LocalDate.parse(it) }
+                fulfilledDate = patchObj.optStringOrNull("fulfilledDate")?.let { LocalDate.parse(it) },
+                optedForRaffle = patchObj.optBoolean("optedForRaffle", false)
             )
         }
         SessionBackupAward(

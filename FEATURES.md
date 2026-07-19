@@ -1,6 +1,6 @@
 # Patch Tracker — Feature Guide
 
-Version 0.1.9 · last updated 2026-07-19
+Version 0.1.10 · last updated 2026-07-19
 
 Patch Tracker is an Android app for a local APA (American Poolplayers Association)
 pool league. It keeps track of which patches each player has earned, whether the
@@ -51,13 +51,16 @@ Because a player can earn several patches in one night, a single entry can hold
 several patches — you don't create a separate record for each one. Each patch on
 the entry is still tracked independently.
 
-### Awarded vs. Owed
+### Awarded, Owed, or Raffle
 
-Every patch on an award is either:
+Every patch on an award is one of:
 
 - **Awarded** — handed to the player at the time.
 - **Owed** — earned but not yet handed over. An owed patch can later be marked
   **Fulfilled** (with the date it was handed over) straight from the list.
+- **Raffle** — the player opted to enter the Mini Mania raffle instead of
+  taking the physical patch. Like Awarded, this is a final status — there's
+  nothing left to fulfill later.
 
 ### Adding and editing an award
 
@@ -70,7 +73,9 @@ characters. Pick one to select them.
   There's also a **"No division"** option for a player who isn't currently on a
   team (e.g. dropped from a lineup).
 - **+ Add Another Patch** adds another patch to the same entry; the trash icon on
-  a patch row removes it (an entry always keeps at least one patch).
+  a patch row removes it (an entry always keeps at least one patch). Each patch
+  row picks its status — **Awarded at the time**, **Still owed**, or **Opted
+  for Mini Mania raffle** — the three are mutually exclusive.
 - You can add a **photo** of the player with their patches — either **Take Photo**
   with the camera or **Choose from Device** to pick an existing photo from your
   gallery. Once added, you can retake/re-choose or remove it.
@@ -83,7 +88,7 @@ Above the list are filters that work together — pick any combination:
 
 - **Session** — which session's awards to show.
 - **Division**, **Player**, **Date Earned** dropdowns — narrow to a specific one.
-- **Awarded / Owed** chips — show only patches with that status.
+- **Awarded / Owed / Raffle** chips — show only patches with that status.
 
 The dropdown filters are *interdependent*: choosing one narrows the choices
 offered by the others, so you only ever see combinations that actually exist.
@@ -233,9 +238,10 @@ or not.
 
 When you export/finalize a session, the app tidies up its patches automatically:
 
-- **Patches already awarded** (handed over on the spot, or an owed patch you've
-  since marked fulfilled) are **cleared** — they've served their purpose, and the
-  backup you just saved keeps the full record.
+- **Patches already awarded** (handed over on the spot, an owed patch you've
+  since marked fulfilled, or one where the player opted for the Mini Mania
+  raffle) are **cleared** — they've served their purpose, and the backup you
+  just saved keeps the full record.
 - **Patches still owed** **carry over to the current session**, so the league
   doesn't lose track of what it still owes players. They appear there as Owed,
   dated before the current session started (the day they were originally earned),

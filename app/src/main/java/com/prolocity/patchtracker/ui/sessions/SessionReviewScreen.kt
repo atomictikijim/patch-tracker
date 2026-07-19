@@ -132,7 +132,7 @@ fun SessionReviewScreen(
                                         if ((awardIndex to patchIndex) in repeatRefs) {
                                             RepeatBadge()
                                         }
-                                        StatusBadge(awarded = patch.awardedAtTime || patch.fulfilledDate != null)
+                                        StatusBadge(status = patch.status)
                                     }
                                 }
                             }

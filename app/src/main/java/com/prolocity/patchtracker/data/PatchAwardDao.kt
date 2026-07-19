@@ -30,7 +30,8 @@ interface PatchAwardDao {
                pt.badgeText AS patchBadgeText,
                pt.imagePath AS patchImagePath,
                l.awardedAtTime AS awardedAtTime,
-               l.fulfilledDate AS fulfilledDate
+               l.fulfilledDate AS fulfilledDate,
+               l.optedForRaffle AS optedForRaffle
         FROM patch_award_lines l
         INNER JOIN patch_award_events e ON e.id = l.eventId
         INNER JOIN players p ON p.id = e.playerId
@@ -61,7 +62,8 @@ interface PatchAwardDao {
                pt.badgeText AS patchBadgeText,
                pt.imagePath AS patchImagePath,
                l.awardedAtTime AS awardedAtTime,
-               l.fulfilledDate AS fulfilledDate
+               l.fulfilledDate AS fulfilledDate,
+               l.optedForRaffle AS optedForRaffle
         FROM patch_award_lines l
         INNER JOIN patch_award_events e ON e.id = l.eventId
         INNER JOIN players p ON p.id = e.playerId
@@ -76,13 +78,14 @@ interface PatchAwardDao {
     @Query("DELETE FROM patch_award_events WHERE sessionId = :sessionId")
     suspend fun deleteEventsForSession(sessionId: Long)
 
-    // Deletes the "awarded" (handed-over) lines of a session: those NOT still outstanding, i.e.
-    // awarded at the time OR since fulfilled. Owed-and-unfulfilled lines are left in place.
+    // Deletes the resolved (non-outstanding) lines of a session: awarded at the time, since
+    // fulfilled, or opted for the Mini Mania raffle instead of taking the patch. Owed-and-
+    // unfulfilled lines are left in place.
     @Query(
         """
         DELETE FROM patch_award_lines
         WHERE eventId IN (SELECT id FROM patch_award_events WHERE sessionId = :sessionId)
-          AND (awardedAtTime = 1 OR fulfilledDate IS NOT NULL)
+          AND (awardedAtTime = 1 OR fulfilledDate IS NOT NULL OR optedForRaffle = 1)
         """
     )
     suspend fun deleteAwardedLinesForSession(sessionId: Long)

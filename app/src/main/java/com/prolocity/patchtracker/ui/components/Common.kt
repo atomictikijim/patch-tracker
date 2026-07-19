@@ -34,12 +34,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.prolocity.patchtracker.data.PatchLineStatus
 import com.prolocity.patchtracker.ui.theme.Amber40
 import com.prolocity.patchtracker.ui.theme.Amber80
 import com.prolocity.patchtracker.ui.theme.Green40
 import com.prolocity.patchtracker.ui.theme.Green80
 import com.prolocity.patchtracker.ui.theme.LeagueGold
 import com.prolocity.patchtracker.ui.theme.LeagueGoldContainerLight
+import com.prolocity.patchtracker.ui.theme.Purple40
+import com.prolocity.patchtracker.ui.theme.Purple80
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -143,11 +146,14 @@ fun SectionLabel(text: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun StatusBadge(awarded: Boolean, modifier: Modifier = Modifier) {
-    val background = if (awarded) Green80 else Amber80
-    val content = if (awarded) Green40 else Amber40
+fun StatusBadge(status: PatchLineStatus, modifier: Modifier = Modifier) {
+    val (background, content, label) = when (status) {
+        PatchLineStatus.AWARDED -> Triple(Green80, Green40, "Awarded")
+        PatchLineStatus.OWED -> Triple(Amber80, Amber40, "Owed")
+        PatchLineStatus.RAFFLE -> Triple(Purple80, Purple40, "Raffle")
+    }
     Text(
-        text = if (awarded) "Awarded" else "Owed",
+        text = label,
         color = content,
         style = MaterialTheme.typography.labelMedium,
         fontWeight = FontWeight.Bold,
