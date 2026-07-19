@@ -5,20 +5,6 @@ workflows:
     environment:
       vars:
         GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx3072m -Dorg.gradle.parallel=true -Dorg.gradle.daemon=true"
-    triggering:
-      events:
-        - pull_request
-        - push
-    when:
-      changeset:
-        includes:
-          - app/**
-          - build.gradle.kts
-          - settings.gradle.kts
-          - gradle.properties
-          - gradle/**
-          - gradlew
-          - gradlew.bat
     scripts:
       - name: Build debug APK
         script: |
@@ -40,9 +26,6 @@ workflows:
     environment:
       vars:
         GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx3072m -Dorg.gradle.parallel=true -Dorg.gradle.daemon=true"
-    triggering:
-      events:
-        - tag
     scripts:
       - name: Build release APK
         script: |
@@ -73,10 +56,6 @@ workflows:
       vars:
         XCODE_PROJECT: "PatchTracker.xcodeproj"
         XCODE_SCHEME: "PatchTracker"
-    triggering:
-      events:
-        - pull_request
-        - push
     scripts:
       - name: Install XcodeGen
         script: |

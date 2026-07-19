@@ -4,7 +4,7 @@
 
 Functional MVP, verified end-to-end on a physical device. Tracks a player roster (name, number, optional phone/email, with a detail view showing earned-patch counts and team memberships), teams (name, division, up to 8 players each), a 33-patch real-APA catalog (with a per-category icon system plus camera-captured photos for custom patches), and patch award entries — one player/session/division/date per entry, holding multiple patches each with its own independent Awarded/Owed/Raffle status and fulfillment tracking, plus an optional photo of the player with the patches. ("Raffle" — opted for the Mini Mania raffle instead of taking the patch — is now ported to both platforms, 2026-07-19.) Patch awards are now organized around a real `Session` entity with an app-wide "current session" that new awards default to (a Sessions tab manages starting new sessions, renaming, and switching current); a session's awards can be bulk-cleared once finished, exported to a self-contained `.zip` backup via the system file picker, and a backup can be reopened for read-only review without touching the live database. Exporting a session also finalizes it — locking its awards from further add/edit and being the only way to unlock deletion (the current session can never be deleted, finalized or not). Players and Teams can be bulk-loaded via CSV upload (upload icon on each tab; skip-and-report validation mirroring the in-app rules). Every tab has a Help (?) button that renders that screen's section of the in-repo `FEATURES.md` (bundled as an asset at build time, so the help never drifts from the doc), plus an About (ⓘ) button showing the app name, version, and a one-line description — both buttons exist identically on the iOS port's five tabs. The Patches list also has a selection mode (top-bar checklist icon or long-press) for picking several award records and sharing them out via the system share sheet — the award photos ride along as images and a player-name + patches summary is copied to the clipboard for pasting as the caption (Facebook killed group-posting via API, so posting to the league group is a manual final tap). All work through 2026-07-04 is committed — see `NOTES.md` for the decision/bug log behind it.
 
-**No open blockers.** One iOS fix (below) is pushed for `ios-ci` compile verification but not yet confirmed on a physical device.
+**No open blockers.** One iOS fix (below) is pushed for `ios-ci` compile verification but not yet confirmed on a physical device. **All Codemagic workflows are now manual-trigger-only (2026-07-19)** — pushing to `main`/opening a PR/pushing a tag no longer auto-runs `debug-build`/`release-build`/`ios-ci`; any of them must be started by hand from the Codemagic dashboard.
 
 ## Next action
 
@@ -38,6 +38,10 @@ Otherwise the Android app has **no pending action** — pick from "Suggested nex
 - **Keeping the patch catalog current** — APA occasionally adds or retires patches. `DefaultPatchTypes.SEEDS` (the catalog) and `PatchIcons.ICON_SPECS` (the icon-per-category map) are the two places to update; the catalog re-seeds automatically on next app open, and an unmapped `iconKey` just falls back to a generic icon, so this is a non-breaking, low-risk update path.
 
 ## Log
+
+### 2026-07-19 (latest)
+
+- **All Codemagic workflows switched to manual-trigger-only.** Removed `triggering: events: [push, pull_request]`/`[tag]` from `debug-build`, `release-build`, and `ios-ci` in `codemagic.yaml` (and `debug-build`'s now-moot changeset filter); `native-ios-unsigned` was already manual-only. A push to `main`, a PR, or a tag no longer auto-triggers any build — each workflow now only runs when started by hand from the Codemagic dashboard. See NOTES.md 2026-07-19.
 
 ### 2026-07-19 (later)
 

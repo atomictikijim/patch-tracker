@@ -478,4 +478,14 @@ Excluding carried lines from the grouping (not just from the flagged set) is wha
 **Resolution / decision:** `PhotoField`'s `Take/Retake Photo` button, `PhotosPicker` ("Choose from Device"), and `Remove Photo` button were three unstyled interactive controls stacked in a `VStack` that forms a single row inside a SwiftUI `Form` `Section` (`PatchEditView`'s `Section("Photo") { PhotoField(...) }`). This is a known SwiftUI Form/List behavior: without an explicit button style, multiple controls sharing one row can all fire together off a single tap instead of each claiming its own tap target — matching the symptom exactly (whichever control you tap, the `PhotosPicker` presents first, and the queued `.fullScreenCover(isPresented: $showingCamera)` presents next once the first is dismissed). Fixed by adding `.buttonStyle(.borderless)` to all three controls in `PhotoField`, giving each its own discrete tap target. Also applies to `NewPatchTypeView`'s reuse of the same component (custom patch-type photo, camera-only) once it has 2+ controls (Retake + Remove). Not verified interactively — no local Mac/simulator/device; pushed for `ios-ci` (compiles-only) per the standing iOS verification constraint, and needs a manual on-device check via the `native-ios-unsigned` Codemagic workflow before being considered fully confirmed.
 
 **Related metadata:** `ios/PatchTracker/UI/Components/PhotoField.swift`.
+
+### 2026-07-19 — All Codemagic workflows switched to manual-trigger-only
+
+**Type:** Decision
+
+**What happened:** User requested every Codemagic workflow require a manual trigger from the dashboard/API rather than firing automatically on `push`/`pull_request`/`tag`.
+
+**Resolution / decision:** Removed the `triggering:` block (and, on `debug-build`, its now-meaningless `when: changeset: includes: [...]` filter, since changeset filtering only matters for automatic triggers) from `debug-build`, `release-build`, and `ios-ci` in `codemagic.yaml`. `native-ios-unsigned` already had no `triggering:` block (it's been manual-only since it was added), so this brings all four workflows to the same manual-only model. In Codemagic, a workflow with no `triggering:` section simply never auto-fires — it only runs when started by hand — so this is a pure removal, no new syntax. Practical effect: pushing to `main` (or opening a PR, or pushing a tag) no longer costs any build minutes or triggers `ios-ci`/`debug-build`/`release-build` automatically; each must be started manually from the Codemagic dashboard when verification is actually wanted.
+
+**Related metadata:** `codemagic.yaml`.
 **Related metadata:** `ios/PatchTracker/Data/SessionBackup.swift` (`ResolvedBackupPatch`), commit `e95167e`.
