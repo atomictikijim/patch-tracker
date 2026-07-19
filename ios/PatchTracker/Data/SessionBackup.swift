@@ -77,6 +77,24 @@ struct ResolvedBackupPatch: Identifiable {
     let fulfilledDate: Date?
     let optedForRaffle: Bool
 
+    init(
+        name: String,
+        iconKey: String?,
+        badgeText: String?,
+        photoURL: URL?,
+        awardedAtTime: Bool,
+        fulfilledDate: Date?,
+        optedForRaffle: Bool = false
+    ) {
+        self.name = name
+        self.iconKey = iconKey
+        self.badgeText = badgeText
+        self.photoURL = photoURL
+        self.awardedAtTime = awardedAtTime
+        self.fulfilledDate = fulfilledDate
+        self.optedForRaffle = optedForRaffle
+    }
+
     var status: PatchLineStatus {
         patchLineStatus(awardedAtTime: awardedAtTime, fulfilledDate: fulfilledDate, optedForRaffle: optedForRaffle)
     }
