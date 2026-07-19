@@ -4,8 +4,10 @@ import UIKit
 
 /// Covers the pure logic behind Phase 5 (session backup + finalize-on-export carry-forward):
 /// JSON schema round-tripping, resolving the wire format to display-ready values, repeat-patch
-/// detection in a reopened backup, and the carry/delete date-capping rule. None of this touches
-/// SwiftData/ModelContainer — see NOTES.md 2026-07-18 on why those tests are avoided here.
+/// detection in a reopened backup, the carry/delete date-capping rule, and (2026-07-19) the
+/// three-way Awarded/Owed/Raffle `patchLineStatus` derivation plus the `optedForRaffle` wire-format
+/// field's backward-compatible decode. None of this touches SwiftData/ModelContainer — see
+/// NOTES.md 2026-07-18 on why those tests are avoided here.
 final class SessionBackupTests: XCTestCase {
     // MARK: - JSON round trip
 
@@ -148,8 +150,66 @@ final class SessionBackupTests: XCTestCase {
         XCTAssertTrue(refs.isEmpty)
     }
 
+    // MARK: - Patch line status derivation (Awarded / Owed / Raffle)
+
+    func testPatchLineStatusPrefersRaffleOverAwardedAndOwed() {
+        XCTAssertEqual(patchLineStatus(awardedAtTime: true, fulfilledDate: nil, optedForRaffle: true), .raffle)
+        XCTAssertEqual(patchLineStatus(awardedAtTime: false, fulfilledDate: nil, optedForRaffle: true), .raffle)
+    }
+
+    func testPatchLineStatusAwardedWhenAwardedAtTimeOrFulfilled() {
+        XCTAssertEqual(patchLineStatus(awardedAtTime: true, fulfilledDate: nil, optedForRaffle: false), .awarded)
+        XCTAssertEqual(
+            patchLineStatus(awardedAtTime: false, fulfilledDate: DateOnly.today(), optedForRaffle: false),
+            .awarded
+        )
+    }
+
+    func testPatchLineStatusOwedWhenNeitherAwardedNorRaffle() {
+        XCTAssertEqual(patchLineStatus(awardedAtTime: false, fulfilledDate: nil, optedForRaffle: false), .owed)
+    }
+
+    // MARK: - optedForRaffle wire format (new field)
+
+    func testSessionBackupPatchDecodesMissingOptedForRaffleAsFalse() throws {
+        // A .zip exported before this field existed won't have the key in session.json at all.
+        let json = """
+        {"name":"8-Ball Clean Sweep","iconKey":"clean_sweep","badgeText":null,"photoFileName":null,"awardedAtTime":true,"fulfilledDate":null}
+        """.data(using: .utf8)!
+        let patch = try JSONDecoder().decode(SessionBackupPatch.self, from: json)
+        XCTAssertFalse(patch.optedForRaffle)
+    }
+
+    func testSessionBackupPatchRoundTripsOptedForRaffle() throws {
+        let original = SessionBackupPatch(
+            name: "100 Matches Played", iconKey: nil, badgeText: "100", photoFileName: nil,
+            awardedAtTime: false, fulfilledDate: nil, optedForRaffle: true
+        )
+        let data = try JSONEncoder().encode(original)
+        let decoded = try JSONDecoder().decode(SessionBackupPatch.self, from: data)
+        XCTAssertEqual(decoded, original)
+        XCTAssertTrue(decoded.optedForRaffle)
+    }
+
+    func testResolvePropagatesOptedForRaffleIntoStatus() {
+        let award = SessionBackupAward(
+            playerName: "Ariel Lopez", playerNumber: "12345", division: "692",
+            dateEarned: "2026-03-05", photoFileName: nil,
+            patches: [SessionBackupPatch(
+                name: "100 Matches Played", iconKey: nil, badgeText: "100", photoFileName: nil,
+                awardedAtTime: false, fulfilledDate: nil, optedForRaffle: true
+            )]
+        )
+        let data = SessionBackupData(sessionName: "S", createdDate: "2026-03-01", exportedAt: "2026-07-18", awards: [award])
+        let resolved = SessionBackup.resolve(data, photosDir: URL(fileURLWithPath: "/tmp/photos"))
+        XCTAssertEqual(resolved.awards[0].patches[0].status, .raffle)
+    }
+
     // MARK: - Finalize carry-forward decision
 
+    // `lineIsOutstanding` is already collapsed to `Bool` by the time it reaches `outcome`, so this
+    // also covers an event whose lines are all raffle-opted (never outstanding) — same as an
+    // all-awarded event, it has nothing to carry and is deleted outright.
     func testOutcomeDeletesEventWithNoOutstandingLines() {
         let event = SessionFinalize.EventSummary(dateEarned: DateOnly.fromIso("2026-03-05")!, lineIsOutstanding: [false, false])
         let outcome = SessionFinalize.outcome(for: event, targetCreatedDate: DateOnly.fromIso("2026-07-01")!)

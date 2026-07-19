@@ -67,7 +67,7 @@ struct SessionReviewView: View {
                         if repeatRefs.contains(SessionBackup.RepeatRef(awardIndex: awardIndex, patchIndex: patchIndex)) {
                             RepeatBadge()
                         }
-                        StatusBadge(awarded: patch.isAwarded)
+                        StatusBadge(status: patch.status)
                     }
                 }
             }

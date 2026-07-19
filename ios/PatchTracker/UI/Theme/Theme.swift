@@ -53,4 +53,8 @@ enum LeagueColors {
     static let amber80 = Color(hex: 0xFFE082)
     static let amber40 = Color(hex: 0xA36A00)
     static let goldContainer = Color(hex: 0xFFE082)
+
+    // Raffle status - distinct from the brand blue so it doesn't read as a link/action color.
+    static let purple80 = Color(hex: 0xD8C6F0)
+    static let purple40 = Color(hex: 0x6A3FA0)
 }

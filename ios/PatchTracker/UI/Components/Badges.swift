@@ -71,17 +71,40 @@ struct InitialsAvatar: View {
     }
 }
 
-/// Awarded (green) / Owed (amber) pill, ported from the Android `StatusBadge`.
+/// Awarded (green) / Owed (amber) / Raffle (purple) pill, ported from the Android `StatusBadge`.
 struct StatusBadge: View {
-    let awarded: Bool
+    let status: PatchLineStatus
+
+    private var background: Color {
+        switch status {
+        case .awarded: return LeagueColors.green80
+        case .owed: return LeagueColors.amber80
+        case .raffle: return LeagueColors.purple80
+        }
+    }
+
+    private var foreground: Color {
+        switch status {
+        case .awarded: return LeagueColors.green40
+        case .owed: return LeagueColors.amber40
+        case .raffle: return LeagueColors.purple40
+        }
+    }
+
+    private var label: String {
+        switch status {
+        case .awarded: return "Awarded"
+        case .owed: return "Owed"
+        case .raffle: return "Raffle"
+        }
+    }
 
     var body: some View {
-        Text(awarded ? "Awarded" : "Owed")
+        Text(label)
             .font(.caption).fontWeight(.bold)
-            .foregroundStyle(awarded ? LeagueColors.green40 : LeagueColors.amber40)
+            .foregroundStyle(foreground)
             .padding(.horizontal, 10).padding(.vertical, 4)
-            .background(awarded ? LeagueColors.green80 : LeagueColors.amber80,
-                        in: RoundedRectangle(cornerRadius: 4))
+            .background(background, in: RoundedRectangle(cornerRadius: 4))
     }
 }
 

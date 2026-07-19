@@ -108,8 +108,10 @@ Seven entities become `@Model` classes; relationships replace Room foreign keys.
 - `PatchType` — `name` (unique), `iconKey?`, `badgeText?`, `imagePath?`.
 - `PatchAwardEvent` — `playerId/relationship`, `session`, `division`, `dateEarned`,
   `photoPath?`; cascade-delete its lines.
-- `PatchAwardLine` — `event`, `patchType`, `awardedAtTime`, `fulfilledDate?`;
-  `isOutstanding` = computed (`!awardedAtTime && fulfilledDate == nil`).
+- `PatchAwardLine` — `event`, `patchType`, `awardedAtTime`, `fulfilledDate?`, `optedForRaffle`
+  (2026-07-19: opted for the Mini Mania raffle instead of taking the patch — mutually exclusive
+  with the other two at the UI layer); `status` (Awarded/Owed/Raffle, via the free function
+  `patchLineStatus`) and `isOutstanding` (`status == .owed`) are both computed.
 - `Team` — `name`, `division` (3 digits); many-to-many members via ordered slots.
 - `TeamMember` — join with `position` (0–7, slot 0 = captain), cascade both ways.
 - `Session` — `name`, `createdDate`, `isCurrent`, `isFinalized`.
@@ -184,7 +186,8 @@ repeat-detection set, don't recompute). Photos ride along as share images.
 Session lifecycle (current / finalize / lock); clear-session-awards; `.zip` export +
 import via ZIPFoundation (JSON + photos); read-only review screen. **Finalize-on-export
 carry-forward (Android v0.1.8):** exporting a session writes the backup first, then, in one
-transaction, **clears its already-awarded lines** (`awardedAtTime` or since-fulfilled),
+transaction, **clears its already-awarded lines** (`awardedAtTime`, since-fulfilled, or opted
+for the Mini Mania raffle, added 2026-07-19 — see `status`/`isOutstanding` above),
 **carries its still-owed lines into the current session** (move the whole event, keeping its
 date/division/photo, dropping only the awarded lines from mixed events; delete the emptied
 all-awarded events), and finally marks the session finalized. Owed patches move into the

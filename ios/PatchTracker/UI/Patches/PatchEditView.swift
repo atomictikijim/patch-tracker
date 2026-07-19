@@ -14,8 +14,29 @@ private struct PatchLineState: Identifiable {
     var existingLine: PatchAwardLine?
     var patchType: PatchType?
     var awardedAtTime = true
+    var optedForRaffle = false
     var fulfilled = false
     var fulfilledDate = DateOnly.today()
+
+    /// The three-way status this line is currently set to, and the setter that keeps
+    /// `awardedAtTime`/`optedForRaffle` mutually exclusive — mirrors the Android edit screen's
+    /// three `FilterChip`s resetting each other.
+    var status: PatchLineStatus {
+        get { patchLineStatus(awardedAtTime: awardedAtTime, fulfilledDate: nil, optedForRaffle: optedForRaffle) }
+        set {
+            switch newValue {
+            case .awarded:
+                awardedAtTime = true
+                optedForRaffle = false
+            case .owed:
+                awardedAtTime = false
+                optedForRaffle = false
+            case .raffle:
+                awardedAtTime = false
+                optedForRaffle = true
+            }
+        }
+    }
 }
 
 /// Add/edit a patch award entry: player, session, division (from the player's teams), date,
@@ -212,13 +233,14 @@ struct PatchEditView: View {
                 }
             }
 
-            Picker("Status", selection: line.awardedAtTime) {
-                Text("Awarded at the time").tag(true)
-                Text("Still owed").tag(false)
+            Picker("Status", selection: line.status) {
+                Text("Awarded at the time").tag(PatchLineStatus.awarded)
+                Text("Still owed").tag(PatchLineStatus.owed)
+                Text("Opted for Mini Mania raffle").tag(PatchLineStatus.raffle)
             }
             .pickerStyle(.segmented)
 
-            if !line.wrappedValue.awardedAtTime {
+            if !line.wrappedValue.awardedAtTime && !line.wrappedValue.optedForRaffle {
                 Toggle("Since fulfilled", isOn: line.fulfilled)
                 if line.wrappedValue.fulfilled {
                     DatePicker("Fulfilled Date", selection: line.fulfilledDate, displayedComponents: .date)
@@ -242,6 +264,7 @@ struct PatchEditView: View {
                 existingLine: line,
                 patchType: line.patchType,
                 awardedAtTime: line.awardedAtTime,
+                optedForRaffle: line.optedForRaffle,
                 fulfilled: line.fulfilledDate != nil,
                 fulfilledDate: line.fulfilledDate ?? DateOnly.today()
             )
@@ -277,7 +300,8 @@ struct PatchEditView: View {
             guard let patchType = line.patchType else { continue }
             context.insert(PatchAwardLine(
                 awardedAtTime: line.awardedAtTime,
-                fulfilledDate: (!line.awardedAtTime && line.fulfilled) ? line.fulfilledDate : nil,
+                fulfilledDate: (!line.awardedAtTime && !line.optedForRaffle && line.fulfilled) ? line.fulfilledDate : nil,
+                optedForRaffle: line.optedForRaffle,
                 event: targetEvent,
                 patchType: patchType
             ))

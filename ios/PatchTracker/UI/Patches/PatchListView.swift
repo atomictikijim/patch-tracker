@@ -3,7 +3,7 @@ import SwiftData
 import UIKit
 
 private enum StatusFilter: String, CaseIterable, Identifiable {
-    case all = "All", awarded = "Awarded", owed = "Owed"
+    case all = "All", awarded = "Awarded", owed = "Owed", raffle = "Raffle"
     var id: String { rawValue }
 }
 
@@ -231,7 +231,7 @@ struct PatchListView: View {
                         Text(line.patchType?.name ?? "")
                             .frame(maxWidth: .infinity, alignment: .leading)
                         if repeatLineIDs.contains(line.persistentModelID) { RepeatBadge() }
-                        StatusBadge(awarded: !line.isOutstanding)
+                        StatusBadge(status: line.status)
                         if line.isOutstanding && !finalized {
                             Button("Mark Fulfilled") { markFulfilled(line) }
                                 .buttonStyle(.borderless)
@@ -289,8 +289,9 @@ struct PatchListView: View {
             let lines: [PatchAwardLine]
             switch status {
             case .all: lines = event.lines
-            case .awarded: lines = event.lines.filter { !$0.isOutstanding }
-            case .owed: lines = event.lines.filter { $0.isOutstanding }
+            case .awarded: lines = event.lines.filter { $0.status == .awarded }
+            case .owed: lines = event.lines.filter { $0.status == .owed }
+            case .raffle: lines = event.lines.filter { $0.status == .raffle }
             }
             guard !lines.isEmpty else { return nil }
             let sorted = lines.sorted { ($0.patchType?.name ?? "") < ($1.patchType?.name ?? "") }
@@ -343,8 +344,9 @@ struct PatchListView: View {
     private func matchesStatus(_ e: PatchAwardEvent) -> Bool {
         switch status {
         case .all: return true
-        case .awarded: return e.lines.contains { !$0.isOutstanding }
-        case .owed: return e.lines.contains { $0.isOutstanding }
+        case .awarded: return e.lines.contains { $0.status == .awarded }
+        case .owed: return e.lines.contains { $0.status == .owed }
+        case .raffle: return e.lines.contains { $0.status == .raffle }
         }
     }
     private func matchesSession(_ e: PatchAwardEvent) -> Bool {

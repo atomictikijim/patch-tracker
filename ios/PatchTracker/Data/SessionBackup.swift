@@ -12,6 +12,38 @@ struct SessionBackupPatch: Codable, Equatable {
     let photoFileName: String?
     let awardedAtTime: Bool
     let fulfilledDate: String?
+    let optedForRaffle: Bool
+
+    init(
+        name: String,
+        iconKey: String?,
+        badgeText: String?,
+        photoFileName: String?,
+        awardedAtTime: Bool,
+        fulfilledDate: String?,
+        optedForRaffle: Bool = false
+    ) {
+        self.name = name
+        self.iconKey = iconKey
+        self.badgeText = badgeText
+        self.photoFileName = photoFileName
+        self.awardedAtTime = awardedAtTime
+        self.fulfilledDate = fulfilledDate
+        self.optedForRaffle = optedForRaffle
+    }
+
+    // Custom decode so a .zip exported before this field existed (missing key) decodes as false
+    // rather than failing outright — mirrors the Android org.json `optBoolean(..., false)` read.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        name = try container.decode(String.self, forKey: .name)
+        iconKey = try container.decodeIfPresent(String.self, forKey: .iconKey)
+        badgeText = try container.decodeIfPresent(String.self, forKey: .badgeText)
+        photoFileName = try container.decodeIfPresent(String.self, forKey: .photoFileName)
+        awardedAtTime = try container.decode(Bool.self, forKey: .awardedAtTime)
+        fulfilledDate = try container.decodeIfPresent(String.self, forKey: .fulfilledDate)
+        optedForRaffle = try container.decodeIfPresent(Bool.self, forKey: .optedForRaffle) ?? false
+    }
 }
 
 /// A backed-up award entry (one `PatchAwardEvent`), denormalized: the player's name/number are
@@ -43,8 +75,11 @@ struct ResolvedBackupPatch: Identifiable {
     let photoURL: URL?
     let awardedAtTime: Bool
     let fulfilledDate: Date?
+    let optedForRaffle: Bool
 
-    var isAwarded: Bool { awardedAtTime || fulfilledDate != nil }
+    var status: PatchLineStatus {
+        patchLineStatus(awardedAtTime: awardedAtTime, fulfilledDate: fulfilledDate, optedForRaffle: optedForRaffle)
+    }
 }
 
 struct ResolvedBackupAward: Identifiable {
@@ -93,7 +128,8 @@ enum SessionBackup {
                         badgeText: line.patchType?.badgeText,
                         photoFileName: line.patchType?.imagePath,
                         awardedAtTime: line.awardedAtTime,
-                        fulfilledDate: line.fulfilledDate.map(DateOnly.isoString)
+                        fulfilledDate: line.fulfilledDate.map(DateOnly.isoString),
+                        optedForRaffle: line.optedForRaffle
                     )
                 }
             )
@@ -129,7 +165,8 @@ enum SessionBackup {
                         badgeText: patch.badgeText,
                         photoURL: url(patch.photoFileName),
                         awardedAtTime: patch.awardedAtTime,
-                        fulfilledDate: patch.fulfilledDate.flatMap(DateOnly.fromIso)
+                        fulfilledDate: patch.fulfilledDate.flatMap(DateOnly.fromIso),
+                        optedForRaffle: patch.optedForRaffle
                     )
                 }
             )
@@ -262,7 +299,8 @@ enum SessionFinalize {
         return .carry(newDate: event.dateEarned > cap ? cap : event.dateEarned)
     }
 
-    /// Applies the decision to live SwiftData objects: delete this session's awarded lines,
+    /// Applies the decision to live SwiftData objects: delete this session's resolved lines
+    /// (awarded, since-fulfilled, or opted for the Mini Mania raffle — anything `!isOutstanding`),
     /// carry or drop each event per `outcome(for:targetCreatedDate:)`, then mark the session
     /// finalized. `target` is nil only in the (should-be-unreachable, since the app always has a
     /// current session other than this one once it's non-current) case where there's nowhere to
