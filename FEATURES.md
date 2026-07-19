@@ -119,13 +119,15 @@ player has earned it before in the same session and division, and/or
 **(raffle)** if they opted for the Mini Mania raffle instead of taking that
 patch. Both tags can apply to the same patch. If the same patch appears more
 than once on one award (e.g. the player received two of the same patch at
-once), it's shown once with a **×N** suffix instead of being listed twice.
-For example:
+once), it's shown once with a **×N** suffix instead of being listed twice —
+and if any of those N are themselves a repeat, the repeat tag gets its own
+count of how many, e.g. **×3 (repeat ×2)** for three of the same patch where
+only the first is the player's first award of it this session. For example:
 
 > Ariel Lopez (Storm Breakers) — 8-Ball Clean Sweep
 > Damian Aviles (ShotCallers) — 8-Ball Clean Sweep (repeat)
 > Angel Ponce (Fantastic 8) — 8-Ball on the Break (repeat, raffle)
-> Wild Bill Keister (Cue Crew) — 9-Ball on the Snap ×2
+> Wild Bill Keister (Cue Crew) — 9-Ball on the Snap ×3 (repeat ×2)
 
 (Posting to the league's Facebook group is the final manual step — pick the group
 in the share sheet and paste the caption.)

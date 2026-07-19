@@ -408,14 +408,16 @@ struct PatchListView: View {
     private func buildShareSummary(_ selectedEvents: [PatchAwardEvent]) -> String {
         let lines = selectedEvents.map { event -> String in
             // Grouped by name (preserving first-seen order) rather than deduped away, so a patch
-            // awarded more than once in this same entry still shows up - just collapsed onto one
-            // part with a "×N" suffix instead of one part per identical patch. Tags come from the
-            // group's first line: "repeat" if the player earned this patch before this entry -
-            // either an earlier line in this same award or an earlier award entirely (matches the
-            // in-list Repeat badge, computed from repeatLineIDs) - and/or "raffle" if they opted
-            // for the Mini Mania raffle instead of taking the patch. A same-entry duplicate's own
-            // line is never itself the "first" one seen for its key, so it never mints an
-            // artificial repeat tag just from being duplicated.
+            // awarded more than once in this same entry still shows up - collapsed onto one part
+            // with a "×N" suffix instead of one part per identical patch. When there's more than
+            // one line, "repeat" gets a count of its own - how many of those N lines are
+            // themselves a repeat (i.e. not the player's first-ever award of this patch this
+            // session) - since a duplicate-within-one-award and a genuine repeat are different
+            // facts that can both be true at once: e.g. 3 of the same patch in one award, where
+            // the first is this player's first award of it this session, reads "×3 (repeat ×2)".
+            // A lone (non-duplicated) line just gets a plain "repeat" tag as before, matching the
+            // in-list Repeat badge. "raffle" is unqualified either way - it flags the patch, not a
+            // per-line count.
             var order: [String] = []
             var byName: [String: [PatchAwardLine]] = [:]
             for line in event.lines {
@@ -425,12 +427,15 @@ struct PatchListView: View {
             }
             let patchParts: [String] = order.map { name in
                 let linesForName = byName[name] ?? []
-                let first = linesForName[0]
+                let count = linesForName.count
+                let repeatCount = linesForName.filter { repeatLineIDs.contains($0.persistentModelID) }.count
+                let isRaffle = linesForName.contains { $0.status == .raffle }
                 var tags: [String] = []
-                if repeatLineIDs.contains(first.persistentModelID) { tags.append("repeat") }
-                if first.status == .raffle { tags.append("raffle") }
-                let label = tags.isEmpty ? name : "\(name) (\(tags.joined(separator: ", ")))"
-                return linesForName.count > 1 ? "\(label) ×\(linesForName.count)" : label
+                if repeatCount > 0 { tags.append(count > 1 ? "repeat ×\(repeatCount)" : "repeat") }
+                if isRaffle { tags.append("raffle") }
+                let tagSuffix = tags.isEmpty ? "" : " (\(tags.joined(separator: ", ")))"
+                let countSuffix = count > 1 ? " ×\(count)" : ""
+                return "\(name)\(countSuffix)\(tagSuffix)"
             }
             let patches = patchParts.joined(separator: ", ")
             let team = teamName(for: event.player, division: event.division)

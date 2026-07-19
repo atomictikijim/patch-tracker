@@ -67,25 +67,29 @@ private fun buildSummary(
 ): String {
     val lines = groups.map { group ->
         // Grouped by name (preserving first-seen order) rather than deduped away, so a patch
-        // awarded more than once in this same entry still shows up - just collapsed onto one
-        // line with a "×N" suffix instead of one line per identical patch. Tags come from the
-        // group's first (earliest) line: "(repeat)" if the player earned this patch before this
-        // entry - either an earlier line in this same award or an earlier award entirely (matches
-        // the in-list Repeat badge, computed from repeatLineIds) - and/or "(raffle)" if they
-        // opted for the Mini Mania raffle instead of taking the patch (matches the in-list purple
-        // Raffle status badge). A same-entry duplicate's own line is never itself the "first" one
-        // seen for its key, so it never mints an artificial repeat tag just from being duplicated.
+        // awarded more than once in this same entry still shows up - collapsed onto one line
+        // with a "×N" suffix instead of one line per identical patch. When there's more than one
+        // line, "repeat" gets a count of its own - how many of those N lines are themselves a
+        // repeat (i.e. not the player's first-ever award of this patch this session) - since a
+        // duplicate-within-one-award and a genuine repeat are different facts that can both be
+        // true at once: e.g. 3 of the same patch in one award, where the first is this player's
+        // first award of it this session, reads "×3 (repeat ×2)". A lone (non-duplicated) line
+        // just gets a plain "(repeat)" tag as before, matching the in-list Repeat badge. "(raffle)"
+        // is unqualified either way - it flags the patch, not a per-line count.
         val patches = group.lines
             .groupBy { it.patchName }
             .entries
             .joinToString(", ") { (name, linesForName) ->
-                val first = linesForName.first()
+                val count = linesForName.size
+                val repeatCount = linesForName.count { it.lineId in repeatLineIds }
+                val isRaffle = linesForName.any { it.status == PatchLineStatus.RAFFLE }
                 val tags = buildList {
-                    if (first.lineId in repeatLineIds) add("repeat")
-                    if (first.status == PatchLineStatus.RAFFLE) add("raffle")
+                    if (repeatCount > 0) add(if (count > 1) "repeat ×$repeatCount" else "repeat")
+                    if (isRaffle) add("raffle")
                 }
-                val label = if (tags.isEmpty()) name else "$name (${tags.joinToString(", ")})"
-                if (linesForName.size > 1) "$label ×${linesForName.size}" else label
+                val tagSuffix = if (tags.isEmpty()) "" else " (${tags.joinToString(", ")})"
+                val countSuffix = if (count > 1) " ×$count" else ""
+                "$name$countSuffix$tagSuffix"
             }
         // The team the player is on for this award's division (one team per player per division),
         // added in parentheses after their name. Awards with no division / no matching team just
