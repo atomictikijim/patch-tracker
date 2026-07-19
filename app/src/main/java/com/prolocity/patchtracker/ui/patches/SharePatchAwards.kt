@@ -6,6 +6,7 @@ import android.content.Context
 import android.net.Uri
 import android.widget.Toast
 import androidx.core.app.ShareCompat
+import com.prolocity.patchtracker.data.PatchLineStatus
 import com.prolocity.patchtracker.data.TeamWithMembers
 import com.prolocity.patchtracker.ui.components.patchPhotoUriFor
 import java.io.File
@@ -65,12 +66,18 @@ private fun buildSummary(
     repeatLineIds: Set<Long>
 ): String {
     val lines = groups.map { group ->
-        // Each patch, deduped by name; a patch the player has earned before this session+division
-        // is flagged "(repeat)" (matches the in-list Repeat badge, computed from repeatLineIds).
+        // Each patch, deduped by name; tagged with "(repeat)" if the player has earned it before
+        // in this session+division (matches the in-list Repeat badge, computed from
+        // repeatLineIds), and/or "(raffle)" if they opted for the Mini Mania raffle instead of
+        // taking the patch (matches the in-list purple Raffle status badge).
         val patches = group.lines
             .distinctBy { it.patchName }
             .joinToString(", ") { line ->
-                if (line.lineId in repeatLineIds) "${line.patchName} (repeat)" else line.patchName
+                val tags = buildList {
+                    if (line.lineId in repeatLineIds) add("repeat")
+                    if (line.status == PatchLineStatus.RAFFLE) add("raffle")
+                }
+                if (tags.isEmpty()) line.patchName else "${line.patchName} (${tags.joinToString(", ")})"
             }
         // The team the player is on for this award's division (one team per player per division),
         // added in parentheses after their name. Awards with no division / no matching team just

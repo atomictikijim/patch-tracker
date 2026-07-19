@@ -412,7 +412,12 @@ struct PatchListView: View {
             for line in event.lines {
                 guard let name = line.patchType?.name, !seenNames.contains(name) else { continue }
                 seenNames.insert(name)
-                patchParts.append(repeatLineIDs.contains(line.persistentModelID) ? "\(name) (repeat)" : name)
+                // Tagged with "repeat" if earned before in this session+division, and/or "raffle"
+                // if the player opted for the Mini Mania raffle instead of taking the patch.
+                var tags: [String] = []
+                if repeatLineIDs.contains(line.persistentModelID) { tags.append("repeat") }
+                if line.status == .raffle { tags.append("raffle") }
+                patchParts.append(tags.isEmpty ? name : "\(name) (\(tags.joined(separator: ", ")))")
             }
             let patches = patchParts.joined(separator: ", ")
             let team = teamName(for: event.player, division: event.division)
