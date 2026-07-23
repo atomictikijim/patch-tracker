@@ -1,5 +1,32 @@
 import Foundation
 import UIKit
+import CoreImage
+import ImageIO
+
+/// Shared across every Core Image render in the photo pipeline (`normalizedOrientation()` here
+/// and the rotate/crop math in `PhotoEditor.swift`) — a `CIContext` is expensive to stand up but
+/// safe and cheap to reuse, and Apple's own guidance is to keep one long-lived instance rather
+/// than creating one per render.
+let sharedCIContext = CIContext()
+
+/// Maps each `UIImage.Orientation` case to its `CGImagePropertyOrientation` counterpart of the
+/// same name — the two enums are parallel by design (same cases, same meaning), so matching by
+/// name rather than raw integer value is the correct, unambiguous conversion.
+private extension CGImagePropertyOrientation {
+    init(_ uiOrientation: UIImage.Orientation) {
+        switch uiOrientation {
+        case .up: self = .up
+        case .upMirrored: self = .upMirrored
+        case .down: self = .down
+        case .downMirrored: self = .downMirrored
+        case .left: self = .left
+        case .leftMirrored: self = .leftMirrored
+        case .right: self = .right
+        case .rightMirrored: self = .rightMirrored
+        @unknown default: self = .up
+        }
+    }
+}
 
 /// Redraws a `UIImage` so its backing `cgImage` pixel buffer matches `.up` orientation and the
 /// image's logical `size` exactly, discarding the separate EXIF orientation tag in favor of
@@ -13,16 +40,18 @@ import UIKit
 /// (2026-07-22: every photo posted to Facebook came out landscape, portrait or not). Normalizing
 /// once here — at save time, so every future read already has correct baked-in pixels — closes
 /// that gap regardless of what any particular downstream consumer chooses to honor.
+///
+/// Uses Core Image's `oriented(_:)` (rather than a hand-rolled `UIGraphicsImageRenderer` redraw)
+/// to bake the orientation tag into the pixel buffer — it's built for exactly this, and rendering
+/// through a single shared `CIContext` sidesteps the render-scale pitfall the old
+/// `UIGraphicsImageRenderer`-based version had to work around by hand (`format.scale` defaults
+/// to the screen's scale, not 1, silently inflating the pixel buffer).
 extension UIImage {
     func normalizedOrientation() -> UIImage {
-        if imageOrientation == .up { return self }
-        // `format.scale` must be pinned to 1 — the default matches the main screen's scale
-        // (e.g. 3x), which would make the redrawn `cgImage`'s actual pixel buffer 3x larger than
-        // `size` reports. Callers (crop math in PhotoEditor.swift) assume 1 point == 1 pixel.
-        let format = UIGraphicsImageRendererFormat()
-        format.scale = 1
-        let renderer = UIGraphicsImageRenderer(size: size, format: format)
-        return renderer.image { _ in draw(in: CGRect(origin: .zero, size: size)) }
+        guard imageOrientation != .up, let cgImage else { return self }
+        let oriented = CIImage(cgImage: cgImage).oriented(CGImagePropertyOrientation(imageOrientation))
+        guard let outCG = sharedCIContext.createCGImage(oriented, from: oriented.extent) else { return self }
+        return UIImage(cgImage: outCG)
     }
 }
 

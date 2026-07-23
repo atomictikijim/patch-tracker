@@ -1,5 +1,6 @@
 import SwiftUI
 import Photos
+import CoreImage
 
 /// Replicates SwiftUI's `.scaledToFit()` centering math so the hand-drawn crop overlay lines up
 /// pixel-for-pixel with the displayed image without an `onGloballyPositioned`-style round trip.
@@ -18,33 +19,40 @@ private func computeFitRect(container: CGSize, imageSize: CGSize) -> CGRect {
     )
 }
 
-/// Rotates a (already orientation-normalized) image by a multiple of 90 degrees, swapping width/
-/// height as needed so the result's pixel buffer keeps agreeing with its logical size.
+/// Rotates a (already orientation-normalized) image by one 90-degree quarter turn — `degrees`'s
+/// sign is the only thing that matters (`+90` from the "rotate right" button, `-90` from "rotate
+/// left"), not its magnitude.
+///
+/// Built on Core Image (`CGAffineTransform` + `CIContext.createCGImage`) rather than the
+/// `UIGraphicsImageRenderer`/`CGContext.rotate(by:)` approach this replaced, for two reasons: (1)
+/// that approach's renderer defaulted to the screen's render scale instead of 1, silently
+/// inflating the pixel buffer on every rotation until repeated rotations crashed on memory
+/// pressure; (2) `CGAffineTransform(rotationAngle:)`'s sin/cos for an exact 90° can be off by a
+/// hair of floating-point error, which is exactly the kind of thing that produces a fuzzy/shifted
+/// edge after a few rotations. Using an exact hand-built matrix for the quarter turn sidesteps
+/// both: no trig, and `CIContext.createCGImage(_:from:)` always renders at the requested extent's
+/// exact pixel size, never a scaled-up one.
+///
+/// The matrices below are derived directly in Core Image's own coordinate space (origin
+/// bottom-left, y increasing upward — NOT the top-left/y-down convention `UIView`/`CGContext`
+/// drawing normally uses): a visual clockwise turn ("rotate right") sends the image's left edge
+/// to the top and its right edge to the bottom; counterclockwise ("rotate left") sends left to
+/// bottom, right to top. Each also carries the translation needed to keep the rotated result's
+/// extent flush with the origin, matching the swapped width/height a 90° turn implies.
 private func rotatedImage(_ image: UIImage, byDegrees degrees: CGFloat) -> UIImage {
-    let radians = degrees * .pi / 180
-    let quarterTurn = Int(degrees / 90) % 2 != 0
-    let newSize = quarterTurn
-        ? CGSize(width: image.size.height, height: image.size.width)
-        : image.size
-    // `format.scale` must be pinned to 1 (see `normalizedOrientation()` in PhotoStorage.swift for
-    // why) — otherwise every rotation re-renders through a buffer ~9x larger in pixel area than
-    // `newSize` implies, which both breaks the crop math's point-equals-pixel assumption and
-    // compounds enough memory pressure across two rotations to crash on-device.
-    let format = UIGraphicsImageRendererFormat()
-    format.scale = 1
-    let renderer = UIGraphicsImageRenderer(size: newSize, format: format)
-    return renderer.image { context in
-        context.cgContext.translateBy(x: newSize.width / 2, y: newSize.height / 2)
-        context.cgContext.rotate(by: radians)
-        image.draw(in: CGRect(
-            x: -image.size.width / 2, y: -image.size.height / 2,
-            width: image.size.width, height: image.size.height
-        ))
-    }
+    guard let cgImage = image.cgImage else { return image }
+    let ciImage = CIImage(cgImage: cgImage)
+    let extent = ciImage.extent
+    let transform: CGAffineTransform = degrees > 0
+        ? CGAffineTransform(a: 0, b: -1, c: 1, d: 0, tx: 0, ty: extent.width)
+        : CGAffineTransform(a: 0, b: 1, c: -1, d: 0, tx: extent.height, ty: 0)
+    let rotated = ciImage.transformed(by: transform)
+    guard let outCG = sharedCIContext.createCGImage(rotated, from: rotated.extent) else { return image }
+    return UIImage(cgImage: outCG)
 }
 
 /// Maps a crop rectangle from on-screen (fit-rect) space into the image's own pixel space,
-/// clamped so `cgImage.cropping(to:)` can never be handed an out-of-bounds rect.
+/// clamped so `cropImage` can never be handed an out-of-bounds rect.
 private func mapToImageRect(_ screenRect: CGRect, fitRect: CGRect, imageSize: CGSize) -> CGRect {
     guard fitRect.width > 0, fitRect.height > 0 else { return CGRect(origin: .zero, size: imageSize) }
     let scaleX = imageSize.width / fitRect.width
@@ -58,12 +66,27 @@ private func mapToImageRect(_ screenRect: CGRect, fitRect: CGRect, imageSize: CG
     return CGRect(x: clampedX, y: clampedY, width: max(1, clampedW), height: max(1, clampedH))
 }
 
-/// Crops to `rect` (already in the image's own pixel space). Assumes `image.size` (points) and
-/// the backing `cgImage`'s pixel dimensions agree 1:1 — true here since every photo this editor
-/// loads comes from `PhotoStorage.image(for:)` (`UIImage(contentsOfFile:)`, always scale 1) after
-/// `normalizedOrientation()`, never from an asset-catalog image that might carry a @2x/@3x scale.
+/// Crops to `rect` (already in the image's own pixel space, top-left origin — assumes
+/// `image.size` (points) and the backing `cgImage`'s pixel dimensions agree 1:1, true here since
+/// every photo this editor loads comes from `PhotoStorage.image(for:)`
+/// (`UIImage(contentsOfFile:)`, always scale 1) after `normalizedOrientation()`, never from an
+/// asset-catalog image that might carry a @2x/@3x scale).
+///
+/// Renders through Core Image (`CIContext.createCGImage(_:from:)`) rather than
+/// `CGImage.cropping(to:)` so the same rendering pipeline backs both crop and rotate. Core
+/// Image's own coordinate space is bottom-left-origin/y-up, unlike `rect`'s top-left-origin
+/// convention, so the y coordinate has to flip before it's used as the render window — otherwise
+/// the crop would land vertically mirrored to the intended region.
 private func cropImage(_ image: UIImage, to rect: CGRect) -> UIImage {
-    guard let cgImage = image.cgImage, let cropped = cgImage.cropping(to: rect) else { return image }
+    guard let cgImage = image.cgImage else { return image }
+    let ciImage = CIImage(cgImage: cgImage)
+    let ciRect = CGRect(
+        x: rect.minX,
+        y: image.size.height - rect.maxY,
+        width: rect.width,
+        height: rect.height
+    ).integral
+    guard let cropped = sharedCIContext.createCGImage(ciImage, from: ciRect) else { return image }
     return UIImage(cgImage: cropped)
 }
 
