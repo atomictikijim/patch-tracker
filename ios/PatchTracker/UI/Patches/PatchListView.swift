@@ -481,9 +481,14 @@ struct PatchListView: View {
         UIPasteboard.general.string = text
 
         var seenPhotoPaths = Set<String>()
+        // `.normalizedOrientation()` is a no-op for anything saved after `PhotoStorage.save`
+        // started baking orientation in at write time, but repairs photos already on-device
+        // from before that fix — otherwise the share extension (Facebook, in particular) can
+        // ignore the EXIF orientation tag and show every photo in its sensor-native (landscape)
+        // orientation regardless of how it was actually taken. See PhotoStorage.swift.
         let images: [UIImage] = events.compactMap { $0.photoPath }
             .filter { !$0.isEmpty && seenPhotoPaths.insert($0).inserted }
-            .compactMap { PhotoStorage.image(for: $0) }
+            .compactMap { PhotoStorage.image(for: $0)?.normalizedOrientation() }
 
         var items: [Any] = [text]
         items.append(contentsOf: images)

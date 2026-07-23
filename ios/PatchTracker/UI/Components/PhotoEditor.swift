@@ -1,22 +1,6 @@
 import SwiftUI
 import Photos
 
-/// Redraws a `UIImage` so its backing `cgImage` pixel buffer matches `.up` orientation and the
-/// image's logical `size` exactly. Camera/library photos often carry a non-`.up` EXIF
-/// orientation where the raw pixel buffer disagrees with the logical (rotated) size that
-/// `Image(uiImage:)` renders — cropping directly against `cgImage` in that state would use the
-/// wrong coordinate space. Normalizing once at load time means every later rotate/crop
-/// calculation in this file can safely assume `image.size` and the pixel buffer agree, with no
-/// separate EXIF-reading step needed (unlike the Android port, which reads
-/// `ExifInterface.TAG_ORIENTATION` by hand since a raw `Bitmap` has no orientation concept).
-extension UIImage {
-    func normalizedOrientation() -> UIImage {
-        if imageOrientation == .up { return self }
-        let renderer = UIGraphicsImageRenderer(size: size)
-        return renderer.image { _ in draw(in: CGRect(origin: .zero, size: size)) }
-    }
-}
-
 /// Replicates SwiftUI's `.scaledToFit()` centering math so the hand-drawn crop overlay lines up
 /// pixel-for-pixel with the displayed image without an `onGloballyPositioned`-style round trip.
 private func computeFitRect(container: CGSize, imageSize: CGSize) -> CGRect {

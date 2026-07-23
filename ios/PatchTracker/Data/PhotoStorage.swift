@@ -1,6 +1,26 @@
 import Foundation
 import UIKit
 
+/// Redraws a `UIImage` so its backing `cgImage` pixel buffer matches `.up` orientation and the
+/// image's logical `size` exactly, discarding the separate EXIF orientation tag in favor of
+/// pixels that are already correct. Needed because two different code paths disagree on whether
+/// they honor `.imageOrientation`: in-app rendering (`Image(uiImage:)`/`UIImageView`) always
+/// does, but re-encoding to raw JPEG bytes for a consumer that reads pixels directly — notably
+/// the Facebook share extension reached via `UIActivityViewController` — does not reliably. A
+/// photo taken in portrait carries a sensor-native (landscape) pixel buffer plus a `.right`/
+/// `.left` orientation tag telling renderers how to rotate it for display; a consumer that reads
+/// the buffer without applying that tag shows it sideways, which is exactly what was reported
+/// (2026-07-22: every photo posted to Facebook came out landscape, portrait or not). Normalizing
+/// once here — at save time, so every future read already has correct baked-in pixels — closes
+/// that gap regardless of what any particular downstream consumer chooses to honor.
+extension UIImage {
+    func normalizedOrientation() -> UIImage {
+        if imageOrientation == .up { return self }
+        let renderer = UIGraphicsImageRenderer(size: size)
+        return renderer.image { _ in draw(in: CGRect(origin: .zero, size: size)) }
+    }
+}
+
 /// Which folder a stored photo belongs to — an award photo (`PatchAwardEvent.photoPath`) or a
 /// custom patch type's photo (`PatchType.imagePath`). Kept as dedicated folders (rather than one
 /// shared one) so the orphan-cleanup scan below can only ever touch award photos, purely by
@@ -52,11 +72,14 @@ enum PhotoStorage {
     /// Writes a JPEG into the folder for `kind` and returns the relative filename to persist on
     /// the model. Always writes a **new** file — callers never overwrite an existing photo in
     /// place, so replacing a photo (retake, crop/rotate save) can never destroy the original.
+    /// Normalizes orientation before writing (see `UIImage.normalizedOrientation()` above) so
+    /// the bytes on disk are already correct for any future consumer, not just ones that respect
+    /// the EXIF orientation tag.
     static func save(_ image: UIImage, kind: PhotoKind = .award) -> String? {
         let prefix = kind == .award ? "award" : "type"
         let fileName = "\(prefix)_\(UUID().uuidString).jpg"
         let url = directory(for: kind).appendingPathComponent(fileName)
-        guard let data = image.jpegData(compressionQuality: 0.85) else { return nil }
+        guard let data = image.normalizedOrientation().jpegData(compressionQuality: 0.85) else { return nil }
         do {
             try data.write(to: url)
             return fileName
