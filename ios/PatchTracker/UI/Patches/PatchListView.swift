@@ -474,24 +474,46 @@ struct PatchListView: View {
         exitSelection()
     }
 
+    /// Resolves a stored award photo to a URL suitable for `UIActivityViewController` — the file
+    /// itself when it's already orientation-correct on disk (everything saved after
+    /// `PhotoStorage.save` started baking orientation in), or a repaired temp-file copy for a
+    /// photo captured before that fix (otherwise a share destination that reads raw pixels
+    /// without applying `.imageOrientation` — Facebook's share extension, in particular — shows
+    /// it in its sensor-native orientation regardless of how it was actually taken; see
+    /// `PhotoStorage.swift`). Returns a file URL rather than a decoded `UIImage` so the share
+    /// destination — an out-of-process extension — reads the image itself instead of receiving
+    /// an already-decoded bitmap over the extension boundary, which is unnecessary memory
+    /// pressure on a process with a much lower memory ceiling than the host app.
+    private func shareableImageURL(for fileName: String) -> URL? {
+        guard let fileURL = PhotoStorage.url(for: fileName),
+              let image = UIImage(contentsOfFile: fileURL.path) else { return nil }
+        guard image.imageOrientation != .up else { return fileURL }
+        guard let data = image.normalizedOrientation().jpegData(compressionQuality: 0.9) else { return nil }
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).jpg")
+        do {
+            try data.write(to: tempURL)
+            return tempURL
+        } catch {
+            return nil
+        }
+    }
+
     /// Copies the (possibly edited) summary to the clipboard (some share targets drop pre-filled
     /// text on image shares) and opens the system share sheet with the text and any of the
-    /// selected events' photos attached.
+    /// selected events' photos attached. The text is handed over via `ShareTextItemSource` rather
+    /// than as a plain `String` so it can be withheld specifically from Facebook — see that
+    /// type's doc comment for why (a crash in Facebook's own share extension, reported as
+    /// happening the instant the Facebook icon is tapped).
     private func performShare(_ events: [PatchAwardEvent], text: String) {
         UIPasteboard.general.string = text
 
         var seenPhotoPaths = Set<String>()
-        // `.normalizedOrientation()` is a no-op for anything saved after `PhotoStorage.save`
-        // started baking orientation in at write time, but repairs photos already on-device
-        // from before that fix — otherwise the share extension (Facebook, in particular) can
-        // ignore the EXIF orientation tag and show every photo in its sensor-native (landscape)
-        // orientation regardless of how it was actually taken. See PhotoStorage.swift.
-        let images: [UIImage] = events.compactMap { $0.photoPath }
+        let imageURLs: [URL] = events.compactMap { $0.photoPath }
             .filter { !$0.isEmpty && seenPhotoPaths.insert($0).inserted }
-            .compactMap { PhotoStorage.image(for: $0)?.normalizedOrientation() }
+            .compactMap { shareableImageURL(for: $0) }
 
-        var items: [Any] = [text]
-        items.append(contentsOf: images)
+        var items: [Any] = [ShareTextItemSource(text: text)]
+        items.append(contentsOf: imageURLs)
         shareTarget = ShareSheetTarget(items: items)
 
         showCopiedToast = true
