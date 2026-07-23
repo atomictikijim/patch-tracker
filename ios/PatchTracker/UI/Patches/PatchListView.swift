@@ -64,6 +64,8 @@ struct PatchListView: View {
     @State private var selectedEventIDs: Set<PersistentIdentifier> = []
     @State private var shareTarget: ShareSheetTarget?
     @State private var showCopiedToast = false
+    @State private var pendingShareEvents: [PatchAwardEvent]?
+    @State private var pendingShareText = ""
 
     var body: some View {
         VStack(spacing: 0) {
@@ -77,7 +79,7 @@ struct PatchListView: View {
                     Button("Cancel") { exitSelection() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button { performShare() } label: { Image(systemName: "square.and.arrow.up") }
+                    Button { prepareShare() } label: { Image(systemName: "square.and.arrow.up") }
                         .disabled(selectedEventIDs.isEmpty)
                         .accessibilityLabel("Share selected awards")
                 }
@@ -106,6 +108,17 @@ struct PatchListView: View {
             }
         }
         .sheet(item: $shareTarget) { target in ShareSheet(items: target.items) }
+        .sheet(isPresented: Binding(
+            get: { pendingShareEvents != nil },
+            set: { if !$0 { pendingShareEvents = nil } }
+        )) {
+            ShareSummaryEditView(text: $pendingShareText) {
+                if let events = pendingShareEvents {
+                    performShare(events, text: pendingShareText)
+                }
+                pendingShareEvents = nil
+            }
+        }
         .alert(
             "Delete patch award?",
             isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }),
@@ -450,25 +463,31 @@ struct PatchListView: View {
         return "Patch awards! 🎉\n\n" + lines.joined(separator: "\n")
     }
 
-    /// Copies the plain-text summary to the clipboard (some share targets drop pre-filled text
-    /// on image shares) and opens the system share sheet with the summary and any of the
-    /// selected events' photos attached.
-    private func performShare() {
+    /// Builds the auto-generated summary for the current selection and opens the editable
+    /// preview sheet — the user can add to or edit the text before it's actually shared.
+    private func prepareShare() {
         let selected = sortedEvents.filter { selectedEventIDs.contains($0.persistentModelID) }
         guard !selected.isEmpty else { return }
 
-        let summary = buildShareSummary(selected)
-        UIPasteboard.general.string = summary
+        pendingShareText = buildShareSummary(selected)
+        pendingShareEvents = selected
+        exitSelection()
+    }
+
+    /// Copies the (possibly edited) summary to the clipboard (some share targets drop pre-filled
+    /// text on image shares) and opens the system share sheet with the text and any of the
+    /// selected events' photos attached.
+    private func performShare(_ events: [PatchAwardEvent], text: String) {
+        UIPasteboard.general.string = text
 
         var seenPhotoPaths = Set<String>()
-        let images: [UIImage] = selected.compactMap { $0.photoPath }
+        let images: [UIImage] = events.compactMap { $0.photoPath }
             .filter { !$0.isEmpty && seenPhotoPaths.insert($0).inserted }
             .compactMap { PhotoStorage.image(for: $0) }
 
-        var items: [Any] = [summary]
+        var items: [Any] = [text]
         items.append(contentsOf: images)
         shareTarget = ShareSheetTarget(items: items)
-        exitSelection()
 
         showCopiedToast = true
         Task {

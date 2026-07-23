@@ -518,3 +518,13 @@ Excluding carried lines from the grouping (not just from the flagged set) is wha
 **Related metadata:** `app/src/main/java/com/prolocity/patchtracker/ui/patches/{SharePatchAwards,PatchListScreen}.kt`.
 
 **Related metadata:** `codemagic.yaml`.
+
+### 2026-07-22 - Ported the editable share-text preview to iOS
+
+**Type:** Decision
+
+**What happened:** Ported the same-day Android editable-share-text feature to the iOS app, per user request ("port these updates to the iOS version"). The other same-day Android feature (photo viewer/editor + SD-card storage) was *not* ported, since `IOS_PORT_PLAN.md` already records it as an intentional Android-only divergence, not a parity gap.
+
+**Resolution / decision:** iOS has no `AlertDialog`-with-a-text-field equivalent that fits a multi-line editable preview well - `Alert` can't host a `TextField` at all, and this project already has a precedent for that exact gap (`CsvImportResultView`'s doc comment: "the Android counterpart is an `AlertDialog`, but iOS alerts can't host a scrollable list... so this uses a small sheet instead"). Followed the same convention: new `ShareSummaryEditView` (`ui/Components/ShareSummaryEditView.swift`) is a `NavigationStack`-wrapped `TextEditor` presented as a `.sheet`, with Cancel (`.cancellationAction`) and Share (`.confirmationAction`) toolbar buttons, bound to a `@Binding<String>` so edits write straight back into the caller's state. `PatchListView`'s single `performShare()` (build summary → clipboard → share sheet, all at once) split into `prepareShare()` (builds `pendingShareText` via the existing `buildShareSummary`, stashes the selected events in `pendingShareEvents`, exits selection mode) and `performShare(_:text:)` (the actual clipboard write + `ShareSheet` presentation, now taking the finalized text as a parameter instead of building it). The new sheet is driven off `pendingShareEvents != nil` (mirrors the existing `pendingDelete`-driven alert `Binding` pattern already in this file) rather than adding a second `Identifiable` wrapper type. Not yet verified - no local Mac/Xcode exists for this project (Codemagic-only per `IOS_PORT_PLAN.md`), and `ios-ci` is manual-trigger-only as of 2026-07-19, so this needs to be started by hand from the Codemagic dashboard before it's confirmed to actually compile.
+
+**Related metadata:** `ios/PatchTracker/UI/Patches/PatchListView.swift`, `ios/PatchTracker/UI/Components/ShareSummaryEditView.swift`.
