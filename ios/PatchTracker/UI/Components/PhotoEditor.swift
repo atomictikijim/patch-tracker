@@ -26,7 +26,13 @@ private func rotatedImage(_ image: UIImage, byDegrees degrees: CGFloat) -> UIIma
     let newSize = quarterTurn
         ? CGSize(width: image.size.height, height: image.size.width)
         : image.size
-    let renderer = UIGraphicsImageRenderer(size: newSize)
+    // `format.scale` must be pinned to 1 (see `normalizedOrientation()` in PhotoStorage.swift for
+    // why) — otherwise every rotation re-renders through a buffer ~9x larger in pixel area than
+    // `newSize` implies, which both breaks the crop math's point-equals-pixel assumption and
+    // compounds enough memory pressure across two rotations to crash on-device.
+    let format = UIGraphicsImageRendererFormat()
+    format.scale = 1
+    let renderer = UIGraphicsImageRenderer(size: newSize, format: format)
     return renderer.image { context in
         context.cgContext.translateBy(x: newSize.width / 2, y: newSize.height / 2)
         context.cgContext.rotate(by: radians)

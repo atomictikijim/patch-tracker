@@ -16,7 +16,12 @@ import UIKit
 extension UIImage {
     func normalizedOrientation() -> UIImage {
         if imageOrientation == .up { return self }
-        let renderer = UIGraphicsImageRenderer(size: size)
+        // `format.scale` must be pinned to 1 — the default matches the main screen's scale
+        // (e.g. 3x), which would make the redrawn `cgImage`'s actual pixel buffer 3x larger than
+        // `size` reports. Callers (crop math in PhotoEditor.swift) assume 1 point == 1 pixel.
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let renderer = UIGraphicsImageRenderer(size: size, format: format)
         return renderer.image { _ in draw(in: CGRect(origin: .zero, size: size)) }
     }
 }
