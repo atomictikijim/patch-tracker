@@ -8,8 +8,9 @@ import android.widget.Toast
 import androidx.core.app.ShareCompat
 import com.prolocity.patchtracker.data.PatchLineStatus
 import com.prolocity.patchtracker.data.TeamWithMembers
+import com.prolocity.patchtracker.ui.components.clearShareCache
 import com.prolocity.patchtracker.ui.components.patchPhotoUriFor
-import java.io.File
+import com.prolocity.patchtracker.ui.components.preparePhotoForSharing
 
 /**
  * Shares the selected patch awards out to another app (typically Facebook).
@@ -35,10 +36,15 @@ internal fun sharePatchAwards(
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     clipboard.setPrimaryClip(ClipData.newPlainText("Patch awards", summary))
 
+    // FileProvider can't grant a URI for a photo stored on a secondary volume (e.g. the SD card,
+    // if the storage setting is on) - its <external-files-path> only covers the primary volume.
+    // Copy such a photo into internal storage first; clearShareCache keeps that scratch folder
+    // from growing unbounded across repeated shares.
+    clearShareCache(context)
     val photoUris: List<Uri> = groups
         .mapNotNull { it.photoPath?.takeIf { path -> path.isNotBlank() } }
         .distinct()
-        .map { patchPhotoUriFor(context, File(it)) }
+        .map { patchPhotoUriFor(context, preparePhotoForSharing(context, it)) }
 
     val builder = ShareCompat.IntentBuilder(context)
         .setChooserTitle("Share patch awards")

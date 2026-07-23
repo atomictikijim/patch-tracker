@@ -221,4 +221,6 @@ class PatchRepository(
 
     suspend fun getSessionAwardLines(sessionId: Long): List<PatchAwardLineDetails> =
         patchAwardDao.getLineDetailsForSession(sessionId)
+
+    suspend fun getAllAwardPhotoPaths(): Set<String> = patchAwardDao.getAllPhotoPaths().toSet()
 }

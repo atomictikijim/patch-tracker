@@ -4,6 +4,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -62,8 +63,11 @@ import com.prolocity.patchtracker.ui.components.PatchTypeIcon
 import com.prolocity.patchtracker.ui.components.PlayerLookupField
 import com.prolocity.patchtracker.ui.components.SaveButton
 import com.prolocity.patchtracker.ui.components.SectionLabel
+import com.prolocity.patchtracker.ui.components.PhotoEditorDialog
+import com.prolocity.patchtracker.ui.components.PhotoViewerDialog
 import com.prolocity.patchtracker.ui.components.copyUriToPatchPhotoFile
-import com.prolocity.patchtracker.ui.components.createPatchPhotoFile
+import com.prolocity.patchtracker.ui.components.createPatchAwardPhotoFile
+import com.prolocity.patchtracker.ui.components.patchAwardPhotosDir
 import com.prolocity.patchtracker.ui.components.patchPhotoUriFor
 import com.prolocity.patchtracker.ui.navigation.Routes
 import java.io.File
@@ -107,6 +111,8 @@ fun PatchEditScreen(
     var dateEarned by remember { mutableStateOf(LocalDate.now()) }
     var photoPath by remember { mutableStateOf<String?>(null) }
     var pendingPhotoPath by remember { mutableStateOf<String?>(null) }
+    var showPhotoViewer by remember { mutableStateOf(false) }
+    var showPhotoEditor by remember { mutableStateOf(false) }
 
     var lines by remember { mutableStateOf(listOf<PatchLineState>()) }
     var nextKey by remember { mutableStateOf(0L) }
@@ -126,7 +132,7 @@ fun PatchEditScreen(
     }
     val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri != null) {
-            copyUriToPatchPhotoFile(context, uri)?.let { photoPath = it.absolutePath }
+            copyUriToPatchPhotoFile(context, uri, patchAwardPhotosDir(context))?.let { photoPath = it.absolutePath }
         }
     }
 
@@ -370,6 +376,7 @@ fun PatchEditScreen(
                                 .size(72.dp)
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .clickable { showPhotoViewer = true }
                         )
                     } else {
                         Box(
@@ -384,7 +391,7 @@ fun PatchEditScreen(
                     }
                     Column {
                         TextButton(onClick = {
-                            val file = createPatchPhotoFile(context)
+                            val file = createPatchAwardPhotoFile(context)
                             pendingPhotoPath = file.absolutePath
                             cameraLauncher.launch(patchPhotoUriFor(context, file))
                         }) { Text(if (photoPath == null) "Take Photo" else "Retake Photo") }
@@ -457,6 +464,22 @@ fun PatchEditScreen(
                 onDone()
             },
             onDismiss = { showDeleteDialog = false }
+        )
+    }
+
+    if (showPhotoViewer && photoPath != null) {
+        PhotoViewerDialog(
+            photoPath = photoPath!!,
+            canEdit = !isLocked,
+            onDismiss = { showPhotoViewer = false },
+            onEdit = { showPhotoViewer = false; showPhotoEditor = true }
+        )
+    }
+    if (showPhotoEditor && photoPath != null && !isLocked) {
+        PhotoEditorDialog(
+            photoPath = photoPath!!,
+            onCancel = { showPhotoEditor = false },
+            onSave = { newPath -> photoPath = newPath; showPhotoEditor = false }
         )
     }
 }

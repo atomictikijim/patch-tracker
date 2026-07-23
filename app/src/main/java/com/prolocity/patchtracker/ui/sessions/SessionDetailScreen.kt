@@ -38,8 +38,11 @@ import com.prolocity.patchtracker.ui.components.BrandTopAppBar
 import com.prolocity.patchtracker.ui.components.ConfirmDialog
 import com.prolocity.patchtracker.ui.components.SaveButton
 import com.prolocity.patchtracker.ui.components.SessionFormDialog
+import com.prolocity.patchtracker.ui.components.cleanUpOrphanedAwardPhotos
 import com.prolocity.patchtracker.ui.components.formatted
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -84,13 +87,17 @@ fun SessionDetailScreen(
             val data = buildSessionBackupData(current, lines)
             context.contentResolver.openOutputStream(uri)?.use { writeSessionBackup(it, data) }
             // Backup holds the full record (owed + awarded); now clear the awarded ones and carry the
-            // owed ones into the current session, then lock this session.
+            // owed ones into the current session, then lock this session. Joining the launched Job
+            // (rather than just firing it) matters here - the cleanup right after must see the DB
+            // state as it is *after* finalize's deletes, not before.
             if (target != null) {
-                viewModel.finalizeSessionCarryingOwed(sessionId, target.id)
+                viewModel.finalizeSessionCarryingOwed(sessionId, target.id).join()
             } else {
-                viewModel.markSessionFinalized(sessionId)
+                viewModel.markSessionFinalized(sessionId).join()
             }
             session = current.copy(isFinalized = true)
+            val referenced = viewModel.getAllAwardPhotoPaths()
+            withContext(Dispatchers.IO) { cleanUpOrphanedAwardPhotos(context, referenced) }
         }
     }
 

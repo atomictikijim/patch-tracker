@@ -5,6 +5,12 @@
         android:name="android.hardware.camera"
         android:required="false" />
 
+    <!-- Only needed to save an exported photo into the shared gallery on Android 9 and below;
+         Android 10+ (scoped storage) needs no permission for a MediaStore insert. -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+
     <application
         android:name=".PatchTrackerApplication"
         android:allowBackup="true"

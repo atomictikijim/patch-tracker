@@ -162,6 +162,8 @@ class PatchTrackerViewModel(private val repository: PatchRepository) : ViewModel
 
     suspend fun getSessionAwardLines(sessionId: Long): List<PatchAwardLineDetails> =
         repository.getSessionAwardLines(sessionId)
+
+    suspend fun getAllAwardPhotoPaths(): Set<String> = repository.getAllAwardPhotoPaths()
 }
 
 class PatchTrackerViewModelFactory(private val repository: PatchRepository) : ViewModelProvider.Factory {

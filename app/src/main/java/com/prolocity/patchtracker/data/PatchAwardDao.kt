@@ -122,6 +122,11 @@ interface PatchAwardDao {
     @Query("SELECT * FROM patch_award_events WHERE id = :id")
     suspend fun getEventById(id: Long): PatchAwardEvent?
 
+    // Every currently-referenced award photo path, used to reconcile against what's actually on
+    // disk (see PatchRepository.getAllAwardPhotoPaths / cleanUpOrphanedAwardPhotos).
+    @Query("SELECT DISTINCT photoPath FROM patch_award_events WHERE photoPath IS NOT NULL")
+    suspend fun getAllPhotoPaths(): List<String>
+
     @Query("SELECT * FROM patch_award_lines WHERE eventId = :eventId ORDER BY id ASC")
     suspend fun getLinesForEvent(eventId: Long): List<PatchAwardLine>
 

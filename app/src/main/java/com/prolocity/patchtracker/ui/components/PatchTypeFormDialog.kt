@@ -80,7 +80,7 @@ fun PatchTypeFormDialog(
                     }
                     Column {
                         TextButton(onClick = {
-                            val file = createPatchPhotoFile(context)
+                            val file = createPatchTypePhotoFile(context)
                             pendingPath = file.absolutePath
                             cameraLauncher.launch(patchPhotoUriFor(context, file))
                         }) { Text(if (imagePath == null) "Take Photo" else "Retake Photo") }

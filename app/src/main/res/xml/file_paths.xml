@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Legacy flat folder - kept so DB rows created before the award/type split still resolve. -->
     <files-path name="patch_photos" path="patch_photos/" />
+    <files-path name="patch_award_photos" path="patch_award_photos/" />
+    <files-path name="patch_type_photos" path="patch_type_photos/" />
+    <files-path name="patch_photos_share_cache" path="patch_photos_share_cache/" />
 </paths>

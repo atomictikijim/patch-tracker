@@ -1,6 +1,6 @@
 # Patch Tracker — Feature Guide
 
-Version 0.1.12 · last updated 2026-07-19
+Version 0.1.13 · last updated 2026-07-22
 
 Patch Tracker is an Android app for a local APA (American Poolplayers Association)
 pool league. It keeps track of which patches each player has earned, whether the
@@ -81,6 +81,23 @@ characters. Pick one to select them.
   gallery. Once added, you can retake/re-choose or remove it.
 
 Editing an existing award reopens the same form with everything pre-filled.
+
+### Viewing and editing a photo
+
+Tap a photo's thumbnail to view it full-size. From there, an **Edit** button opens
+a simple crop-and-rotate editor:
+
+- **Rotate** the photo 90° at a time.
+- **Crop** by dragging the corner handles or dragging the selection itself; the
+  area outside the selection dims to show what will be cut.
+- **Save** keeps the cropped/rotated result on this award (the original capture
+  is left untouched, so there's nothing to lose by experimenting).
+- **Save to Photos** exports a copy of the current crop/rotate result to the
+  device's own Photos/gallery app, independent of whether you also keep it on
+  the award — handy for sharing a copy outside the app.
+
+Viewing a photo is always available, even on a locked (finalized) award; editing
+is not.
 
 ### Finding awards in the list
 
@@ -258,10 +275,30 @@ When you export/finalize a session, the app tidies up its patches automatically:
   treated as leftovers from before and don't count toward Repeat flagging in the
   session they carry into (see "Repeat awards" above).
 
+Exporting also quietly cleans up any award photo files left behind on the device
+that nothing points to anymore (e.g. a photo replaced by a retake, or a capture
+that was never saved) — this is routine housekeeping with no effect on any photo
+still attached to an award.
+
 Because owed patches move into the **current** session, you export the *old*
 session **after** you've started the next one. If you try to export the session
 that's still marked current, the app stops you with a reminder to start (or set)
 the next session first — otherwise the owed patches would have nowhere to go.
+
+---
+
+## Settings
+
+The **gear icon** on the Patches tab opens Settings, which currently holds one
+option:
+
+- **Store new award photos on SD card** — when the device has a removable SD
+  card, this switch sends newly captured/edited award photos there instead of
+  the phone's internal storage, useful for a device that's short on internal
+  space. It's Android-only. Existing photos aren't moved when you toggle it —
+  only new photos taken or edited afterward use the new location. If the switch
+  is on but no card is currently in the device, new photos quietly fall back to
+  internal storage rather than failing.
 
 ---
 

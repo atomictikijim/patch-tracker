@@ -11,6 +11,8 @@ class PatchTrackerApplication : Application() {
 
     private val database by lazy { AppDatabase.getInstance(this, applicationScope) }
 
+    val settings by lazy { AppSettings(applicationContext) }
+
     val repository by lazy {
         PatchRepository(
             database.playerDao(),
