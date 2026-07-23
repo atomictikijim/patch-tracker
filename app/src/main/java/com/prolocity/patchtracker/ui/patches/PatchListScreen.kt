@@ -108,6 +108,8 @@ fun PatchListScreen(
     var pendingDelete by remember { mutableStateOf<PatchEventGroup?>(null) }
     var selectionMode by remember { mutableStateOf(false) }
     var selectedEventIds by remember { mutableStateOf<Set<Long>>(emptySet()) }
+    var pendingShareGroups by remember { mutableStateOf<List<PatchEventGroup>?>(null) }
+    var pendingShareText by remember { mutableStateOf("") }
 
     fun exitSelection() {
         selectionMode = false
@@ -233,7 +235,9 @@ fun PatchListScreen(
                         IconButton(
                             enabled = selectedEventIds.isNotEmpty(),
                             onClick = {
-                                sharePatchAwards(context, groups.filter { it.eventId in selectedEventIds }, teams, repeatLineIds)
+                                val selected = groups.filter { it.eventId in selectedEventIds }
+                                pendingShareGroups = selected
+                                pendingShareText = buildShareSummary(selected, teams, repeatLineIds)
                                 exitSelection()
                             }
                         ) {
@@ -378,6 +382,17 @@ fun PatchListScreen(
                 pendingDelete = null
             },
             onDismiss = { pendingDelete = null }
+        )
+    }
+
+    pendingShareGroups?.let { groupsToShare ->
+        ShareSummaryDialog(
+            initialText = pendingShareText,
+            onDismiss = { pendingShareGroups = null },
+            onShare = { finalText ->
+                sharePatchAwards(context, groupsToShare, finalText)
+                pendingShareGroups = null
+            }
         )
     }
 }

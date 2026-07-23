@@ -5,6 +5,18 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.net.Uri
 import android.widget.Toast
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.core.app.ShareCompat
 import com.prolocity.patchtracker.data.PatchLineStatus
 import com.prolocity.patchtracker.data.TeamWithMembers
@@ -12,29 +24,54 @@ import com.prolocity.patchtracker.ui.components.clearShareCache
 import com.prolocity.patchtracker.ui.components.patchPhotoUriFor
 import com.prolocity.patchtracker.ui.components.preparePhotoForSharing
 
+// A dialog offering the auto-generated share summary for review/editing before it's actually
+// shared - opened from the Patches list's selection-mode Share action, prefilled with
+// buildShareSummary's output. Confirming hands the (possibly edited) text to sharePatchAwards.
+@Composable
+internal fun ShareSummaryDialog(
+    initialText: String,
+    onDismiss: () -> Unit,
+    onShare: (String) -> Unit
+) {
+    var text by remember { mutableStateOf(initialText) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Edit Share Text", fontWeight = FontWeight.Bold) },
+        text = {
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it },
+                minLines = 6,
+                maxLines = 12,
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onShare(text) }) { Text("Share", fontWeight = FontWeight.Bold) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
+}
+
 /**
- * Shares the selected patch awards out to another app (typically Facebook).
+ * Shares the selected patch awards out to another app (typically Facebook), using the given
+ * (already reviewed/edited) [text] rather than building it fresh.
  *
  * Facebook removed the Groups API in April 2024, so there's no way to post to a group
  * programmatically — the only route is the system share sheet, where the user picks the group
- * and posts manually. Facebook also strips pre-filled captions from image shares, so the
- * player/patch summary is copied to the clipboard for the user to paste as the caption while the
- * raw award photos ride along as the shared images.
+ * and posts manually. Facebook also strips pre-filled captions from image shares, so the text is
+ * copied to the clipboard for the user to paste as the caption while the raw award photos ride
+ * along as the shared images.
  */
-internal fun sharePatchAwards(
-    context: Context,
-    groups: List<PatchEventGroup>,
-    teams: List<TeamWithMembers>,
-    repeatLineIds: Set<Long>
-) {
+internal fun sharePatchAwards(context: Context, groups: List<PatchEventGroup>, text: String) {
     if (groups.isEmpty()) return
 
-    val summary = buildSummary(groups, teams, repeatLineIds)
-
-    // Copy the summary so the user can paste it as the Facebook caption (Facebook drops the
+    // Copy the text so the user can paste it as the Facebook caption (Facebook drops the
     // intent's pre-filled text for image shares).
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-    clipboard.setPrimaryClip(ClipData.newPlainText("Patch awards", summary))
+    clipboard.setPrimaryClip(ClipData.newPlainText("Patch awards", text))
 
     // FileProvider can't grant a URI for a photo stored on a secondary volume (e.g. the SD card,
     // if the storage setting is on) - its <external-files-path> only covers the primary volume.
@@ -48,7 +85,7 @@ internal fun sharePatchAwards(
 
     val builder = ShareCompat.IntentBuilder(context)
         .setChooserTitle("Share patch awards")
-        .setText(summary)
+        .setText(text)
 
     if (photoUris.isNotEmpty()) {
         builder.setType("image/*")
@@ -66,7 +103,7 @@ internal fun sharePatchAwards(
     ).show()
 }
 
-private fun buildSummary(
+internal fun buildShareSummary(
     groups: List<PatchEventGroup>,
     teams: List<TeamWithMembers>,
     repeatLineIds: Set<Long>

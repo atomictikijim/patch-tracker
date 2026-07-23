@@ -507,4 +507,14 @@ Excluding carried lines from the grouping (not just from the flagged set) is wha
 
 **Related metadata:** `app/src/main/java/com/prolocity/patchtracker/ui/components/{PhotoViewerDialog,PhotoEditor,SettingsDialog,PatchPhotos}.kt`, `app/src/main/java/com/prolocity/patchtracker/AppSettings.kt`, `app/src/main/java/com/prolocity/patchtracker/ui/patches/{PatchEditScreen,PatchListScreen,SharePatchAwards}.kt`, `app/src/main/java/com/prolocity/patchtracker/ui/sessions/SessionDetailScreen.kt`.
 
+### 2026-07-22 — Editable share-text preview before sending
+
+**Type:** Decision
+
+**What happened:** User request: after selecting patch awards to share, let the person sharing add to/edit the auto-generated summary text before it's actually copied to the clipboard and handed to the share sheet.
+
+**Resolution / decision:** Split `SharePatchAwards.kt`'s single `sharePatchAwards(context, groups, teams, repeatLineIds)` (build text + share, all in one call) into two steps: `buildShareSummary(groups, teams, repeatLineIds)` (the existing text-building logic, widened from `private` to `internal` so `PatchListScreen` can call it) and `sharePatchAwards(context, groups, text)` (now takes the final text directly rather than building it — clipboard copy, photo attachment, and the share-sheet intent are unchanged). A new `ShareSummaryDialog` composable (plain `AlertDialog` + multi-line `OutlinedTextField`, prefilled with `buildShareSummary`'s output) sits between them: `PatchListScreen`'s Share icon now builds the summary and opens this dialog instead of sharing immediately; only tapping the dialog's own **Share** button calls `sharePatchAwards` with whatever the user left in the field. Verified end-to-end on the device: opened the dialog, inserted extra text mid-string, confirmed the share sheet opened with 1 image attached and the "Summary copied" toast fired — the edited text flows into both the clipboard and the intent by construction, since both read the same `finalText` parameter passed from the dialog's confirm callback.
+
+**Related metadata:** `app/src/main/java/com/prolocity/patchtracker/ui/patches/{SharePatchAwards,PatchListScreen}.kt`.
+
 **Related metadata:** `codemagic.yaml`.

@@ -1,6 +1,6 @@
 # Patch Tracker — Feature Guide
 
-Version 0.1.13 · last updated 2026-07-22
+Version 0.1.14 · last updated 2026-07-22
 
 Patch Tracker is an Android app for a local APA (American Poolplayers Association)
 pool league. It keeps track of which patches each player has earned, whether the
@@ -127,9 +127,11 @@ session are compared against each other.
 ### Sharing awards
 
 The Patches list has a **selection mode** (the checklist icon in the top bar, or
-long-press a row). Pick several awards and share them out through the phone's
-normal share sheet. The award photos are attached as images, and a summary is
-copied to your clipboard so you can paste it as the caption. Each summary line
+long-press a row). Pick several awards and tap the share icon to bring up an
+**editable preview** of the auto-generated summary — add anything you like before
+sending, then tap **Share** to bring up the phone's normal share sheet. The award
+photos are attached as images, and the (possibly edited) text is copied to your
+clipboard so you can paste it as the caption. Each auto-generated summary line
 shows the **player's name and their team** (the team they're on in that award's
 division), followed by the patches — with each patch tagged **(repeat)** if the
 player has earned it before in the same session and division, and/or
