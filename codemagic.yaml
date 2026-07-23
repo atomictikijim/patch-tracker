@@ -122,9 +122,11 @@ workflows:
           cd $HOME/build/Release-iphoneos
           mkdir -p Payload
           cp -r PatchTracker.app Payload/
-          zip -r unsigned_app.ipa Payload
+          VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" PatchTracker.app/Info.plist)
+          BUILD=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" PatchTracker.app/Info.plist)
+          zip -r "PatchTracker-${VERSION}-b${BUILD}.ipa" Payload
     artifacts:
-      - $HOME/build/Release-iphoneos/unsigned_app.ipa
+      - $HOME/build/Release-iphoneos/PatchTracker-*.ipa
     publishing:
       email:
         recipients:
