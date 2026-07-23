@@ -243,14 +243,20 @@ enum SessionBackup {
 
         let photosDir = workDir.appendingPathComponent("photos", isDirectory: true)
         try fm.createDirectory(at: photosDir, withIntermediateDirectories: true)
-        let fileNames = (data.awards.map(\.photoFileName) + data.awards.flatMap { $0.patches.map(\.photoFileName) })
-            .compactMap { $0 }
+        // Award and patch-type photos now live in separate on-device folders, so each list is
+        // resolved with its own `PhotoKind` — the zip itself stays one flat `photos/` folder,
+        // since filenames are already namespaced ("award_"/"type_") with no collision risk.
+        let awardFileNames = data.awards.compactMap(\.photoFileName)
+        let typeFileNames = data.awards.flatMap { $0.patches.compactMap(\.photoFileName) }
         var seen = Set<String>()
-        for fileName in fileNames where seen.insert(fileName).inserted {
-            if let source = PhotoStorage.url(for: fileName), fm.fileExists(atPath: source.path) {
+        func copyIfNeeded(_ fileName: String, kind: PhotoKind) {
+            guard seen.insert(fileName).inserted else { return }
+            if let source = PhotoStorage.url(for: fileName, kind: kind), fm.fileExists(atPath: source.path) {
                 try? fm.copyItem(at: source, to: photosDir.appendingPathComponent(fileName))
             }
         }
+        awardFileNames.forEach { copyIfNeeded($0, kind: .award) }
+        typeFileNames.forEach { copyIfNeeded($0, kind: .type) }
 
         let zipURL = fm.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).zip")
         defer { try? fm.removeItem(at: zipURL) }

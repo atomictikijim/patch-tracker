@@ -60,6 +60,8 @@ struct PatchEditView: View {
     @State private var lines: [PatchLineState] = [PatchLineState()]
     @State private var addingPatchTypeTarget: PatchTypeSheetTarget?
     @State private var showingDeleteConfirm = false
+    @State private var showPhotoViewer = false
+    @State private var showPhotoEditor = false
 
     private var isNew: Bool { event == nil }
 
@@ -110,7 +112,10 @@ struct PatchEditView: View {
                 }
 
                 Section("Photo") {
-                    PhotoField(photoPath: $photoPath)
+                    PhotoField(
+                        photoPath: $photoPath,
+                        onViewPhoto: photoPath != nil ? { showPhotoViewer = true } : nil
+                    )
                 }
 
                 Section("Patches") {
@@ -162,6 +167,30 @@ struct PatchEditView: View {
                 Button("Cancel", role: .cancel) {}
             } message: {
                 Text("This removes every patch in this award entry. This cannot be undone.")
+            }
+            .fullScreenCover(isPresented: $showPhotoViewer) {
+                if let image = PhotoStorage.image(for: photoPath, kind: .award) {
+                    PhotoViewerView(
+                        image: image,
+                        canEdit: !isLocked,
+                        onEdit: {
+                            showPhotoViewer = false
+                            showPhotoEditor = true
+                        }
+                    )
+                }
+            }
+            .fullScreenCover(isPresented: $showPhotoEditor) {
+                if !isLocked, let image = PhotoStorage.image(for: photoPath, kind: .award) {
+                    PhotoEditorView(
+                        originalImage: image,
+                        onCancel: { showPhotoEditor = false },
+                        onSave: { newFileName in
+                            photoPath = newFileName
+                            showPhotoEditor = false
+                        }
+                    )
+                }
             }
         }
     }

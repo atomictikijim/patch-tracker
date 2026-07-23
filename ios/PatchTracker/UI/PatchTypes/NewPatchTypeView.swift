@@ -20,7 +20,7 @@ struct NewPatchTypeView: View {
             Form {
                 TextField("Patch Name", text: $name)
                 Section("Photo") {
-                    PhotoField(photoPath: $imagePath, allowsLibraryPick: false)
+                    PhotoField(photoPath: $imagePath, allowsLibraryPick: false, kind: .type)
                 }
             }
             .navigationTitle("Add Patch Type")

@@ -70,7 +70,7 @@ struct PatchIcon: View {
     var overrideImage: UIImage? = nil
 
     var body: some View {
-        if let uiImage = overrideImage ?? PhotoStorage.image(for: imagePath) {
+        if let uiImage = overrideImage ?? PhotoStorage.image(for: imagePath, kind: .type) {
             Image(uiImage: uiImage)
                 .resizable()
                 .scaledToFill()

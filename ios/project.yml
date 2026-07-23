@@ -40,6 +40,7 @@ targets:
         SWIFT_VERSION: "5.0"
         INFOPLIST_KEY_CFBundleDisplayName: Patch Tracker
         INFOPLIST_KEY_NSCameraUsageDescription: "Patch Tracker uses the camera to photograph players with the patches they've earned and to capture custom patch artwork."
+        INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: "Patch Tracker can save an edited patch award photo to your Photos library when you tap \"Save to Photos\"."
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"

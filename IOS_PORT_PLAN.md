@@ -9,9 +9,11 @@ in addition to the camera (Phase 4), the **enriched share summary** — player n
 "(repeat)", no player number (Phase 4), and **owed-patch carry-forward when a session is
 finalized** (Phase 5). Keep this line current when the Android app gains user-visible behavior.
 
-**Intentional Android-only divergence (2026-07-22):** the photo full-size viewer/crop/rotate
-editor, "Save to Photos" gallery export, and the SD-card award-photo storage setting are
-Android-only additions, not a parity gap to close on iOS.
+**Intentional Android-only divergence (2026-07-22):** the SD-card award-photo storage setting
+is an Android-only addition, not a parity gap to close on iOS — there's no removable-media
+equivalent on iOS's sandboxed filesystem. The photo full-size viewer/crop/rotate editor and
+"Save to Photos" export, originally noted here as Android-only too, were ported to iOS the
+same day (`PhotoViewerView`/`PhotoEditor.swift`) — see NOTES.md 2026-07-22.
 
 ## Locked decisions
 

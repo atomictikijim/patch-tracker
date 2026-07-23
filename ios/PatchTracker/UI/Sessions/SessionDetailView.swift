@@ -172,9 +172,14 @@ struct SessionDetailView: View {
     }
 
     /// The backup already holds the full record (owed + awarded); now clear the awarded lines and
-    /// carry the owed ones into the current session, then lock this session.
+    /// carry the owed ones into the current session, then lock this session. Unlike the Android
+    /// finalize call (fire-and-forget from a ViewModel `Job`), `SessionFinalize.apply` is a plain
+    /// synchronous SwiftData mutation, so the orphan-photo scan below can safely run right after
+    /// it returns with no equivalent `.join()` needed.
     private func finalizeAfterExport() {
         SessionFinalize.apply(session: session, target: carryTarget, context: context)
+        let referenced = Set((try? context.fetch(FetchDescriptor<PatchAwardEvent>()))?.compactMap(\.photoPath) ?? [])
+        PhotoStorage.cleanUpOrphanedAwardPhotos(referencedFileNames: referenced)
     }
 
     private func handleDeleteTap() {
